@@ -1,0 +1,63 @@
+# Anna Legal AI - Project Dependencies
+
+## Backend Python Requirements
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database (Async PostgreSQL)
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9  # For pgvector
+alembic==1.13.1  # Database migrations
+
+# Vector Database (pgvector)
+pgvector==0.2.4
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+bcrypt==4.1.2
+
+# AI & Embeddings
+openai==1.10.0
+langchain==0.1.4
+langchain-openai==0.0.5
+tiktoken==0.5.2  # Token counting
+
+# Document Processing
+pypdf2==3.0.1
+pdfplumber==0.10.3
+python-docx==1.1.0
+python-magic==0.4.27  # File type detection
+
+# File Storage (DigitalOcean Spaces / S3)
+boto3==1.34.34
+aioboto3==12.3.0  # Async S3
+
+# Payment Processing (Stripe)
+stripe==8.2.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# HTTP Client (Async)
+httpx==0.26.0
+aiohttp==3.9.3
+
+# Utilities
+pydantic-email-validator==2.0.0
+phonenumbers==8.13.29
+python-dateutil==2.8.2
+
+# Monitoring & Logging
+structlog==24.1.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0  # For testing FastAPI

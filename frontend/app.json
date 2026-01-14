@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Juridik AI assistant",
+    "slug": "juridik-ai-assistant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "juridik-ai",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.juridikai.app"
+    },
+    "android": {
+      "package": "com.juridikai.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-localization", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
