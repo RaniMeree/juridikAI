@@ -6,8 +6,12 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from dotenv import load_dotenv
 from database import get_db, test_connection, close_db
 from routes.auth import router as auth_router
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(title="Juridik AI API", version="1.0.0")
 
