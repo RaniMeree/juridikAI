@@ -130,7 +130,7 @@ export default function LandingPage() {
         <Text style={styles.footerText}>
           © 2026 Juridik AI. {t('web.allRightsReserved')}
         </Text>
-        <View style={styles.footerLinks}>
+        {/* <View style={styles.footerLinks}>
           <Link href="/(web)/about" style={styles.footerLink}>
             <Text style={styles.footerLinkText}>{t('web.about')}</Text>
           </Link>
@@ -139,7 +139,7 @@ export default function LandingPage() {
           </Link>
           <Text style={styles.footerLinkText}>{t('web.privacy')}</Text>
           <Text style={styles.footerLinkText}>{t('web.terms')}</Text>
-        </View>
+        </View> */}
       </View>
     </ScrollView>
     </LinearGradient>
