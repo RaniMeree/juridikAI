@@ -27,10 +27,25 @@ export default function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    // TODO: Implement password reset API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    setIsSubmitted(true);
+    try {
+      const response = await fetch("http://localhost:8000/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to send reset email");
+      }
+      
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Error:", error);
+      // Still show success to prevent email enumeration
+      setIsSubmitted(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {

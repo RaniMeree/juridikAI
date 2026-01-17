@@ -37,6 +37,15 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
@@ -57,6 +66,24 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def create_reset_token(email: str) -> str:
+    """Create a password reset token that expires in 1 hour"""
+    expire = datetime.utcnow() + timedelta(hours=1)
+    to_encode = {"sub": email, "exp": expire, "type": "reset"}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_reset_token(token: str) -> str | None:
+    """Verify reset token and return email"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "reset":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
 
 
 @router.post("/signup", response_model=TokenResponse)
@@ -173,6 +200,63 @@ async def get_current_user(token: str, db: AsyncSession = Depends(get_db)):
         "last_name": user.last_name,
         "role": user.role
     }
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send password reset email"""
+    
+    # Find user
+    result = await db.execute(
+        select(User).where(User.email == request.email)
+    )
+    user = result.scalar_one_or_none()
+    
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Create reset token
+    reset_token = create_reset_token(request.email)
+    
+    # TODO: Send email with reset link
+    # For now, just log the token (in production, send via email service)
+    print(f"Password reset token for {request.email}: {reset_token}")
+    print(f"Reset link: http://localhost:8081/reset-password?token={reset_token}")
+    
+    return {"message": "If the email exists, a reset link has been sent"}
+
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using token"""
+    
+    # Verify token
+    email = verify_reset_token(request.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Find user
+    result = await db.execute(
+        select(User).where(User.email == email)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update password
+    user.password_hash = hash_password(request.new_password)
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    
+    return {"message": "Password successfully reset"}
 
 
 # User model (simplified)
