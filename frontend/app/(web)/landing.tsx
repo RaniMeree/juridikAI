@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Image } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 
 export default function LandingPage() {
@@ -7,7 +8,11 @@ export default function LandingPage() {
   const router = useRouter();
 
   return (
-    <ScrollView style={styles.container}>
+    <LinearGradient
+      colors={['#020617', '#0F172A', '#172032']}
+      style={styles.gradient}
+    >
+      <ScrollView style={styles.container}>
       {/* Header/Navigation */}
       <View style={styles.header}>
         <View style={styles.nav}>
@@ -126,20 +131,23 @@ export default function LandingPage() {
         </View>
       </View>
     </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   header: {
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
     paddingVertical: 20,
     paddingHorizontal: 40,
     borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
+    borderBottomColor: "rgba(100, 116, 139, 0.2)",
   },
   nav: {
     flexDirection: "row",
@@ -193,26 +201,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   hero: {
-    backgroundColor: "#0F172A",
-    paddingVertical: 80,
+    paddingVertical: 100,
     paddingHorizontal: 40,
     alignItems: "center",
   },
   heroTitle: {
     fontSize: 56,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
     maxWidth: 800,
+    letterSpacing: -1,
   },
   heroSubtitle: {
     fontSize: 20,
     color: "#94A3B8",
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 48,
     maxWidth: 600,
-    lineHeight: 30,
+    lineHeight: 32,
   },
   ctaButtons: {
     flexDirection: "row",
@@ -220,39 +228,45 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: "#6366F1",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingHorizontal: 36,
+    paddingVertical: 18,
+    borderRadius: 16,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   primaryButtonText: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   secondaryButton: {
-    backgroundColor: "transparent",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#6366F1",
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    paddingHorizontal: 36,
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#334155",
   },
   secondaryButtonText: {
-    color: "#6366F1",
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "600",
   },
   section: {
     paddingVertical: 80,
     paddingHorizontal: 40,
-    backgroundColor: "#F8FAFC",
   },
   sectionTitle: {
     fontSize: 40,
-    fontWeight: "bold",
-    color: "#0F172A",
+    fontWeight: "800",
+    color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 60,
+    letterSpacing: -0.5,
   },
   featuresGrid: {
     flexDirection: "row",
@@ -263,15 +277,17 @@ const styles = StyleSheet.create({
     marginHorizontal: "auto",
   },
   featureCard: {
-    backgroundColor: "#FFFFFF",
-    padding: 30,
-    borderRadius: 12,
-    width: 280,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: "rgba(30, 41, 59, 0.4)",
+    padding: 32,
+    borderRadius: 24,
+    width: 300,
+    borderWidth: 1,
+    borderColor: "rgba(100, 116, 139, 0.2)",
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
   },
   featureIcon: {
     fontSize: 48,
@@ -280,19 +296,21 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: "#FFFFFF",
     marginBottom: 12,
   },
   featureDescription: {
     fontSize: 16,
-    color: "#64748B",
+    color: "#94A3B8",
     lineHeight: 24,
   },
   ctaSection: {
-    backgroundColor: "#6366F1",
+    backgroundColor: "rgba(30, 41, 59, 0.6)",
     paddingVertical: 80,
     paddingHorizontal: 40,
     alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(100, 116, 139, 0.2)",
   },
   ctaTitle: {
     fontSize: 40,
@@ -308,10 +326,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   footer: {
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(15, 23, 42, 0.8)",
     paddingVertical: 40,
     paddingHorizontal: 40,
     alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(100, 116, 139, 0.2)",
   },
   footerText: {
     color: "#64748B",
