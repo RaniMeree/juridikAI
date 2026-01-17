@@ -25,7 +25,7 @@ export default function LandingPage() {
             <Text style={styles.logoText}>Juridik AI</Text>
           </View>
           <View style={styles.navLinks}>
-            <Link href="/(web)/landing" style={styles.navLink}>
+            {/* <Link href="/(web)/landing" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.home')}</Text>
             </Link>
             <Link href="/(web)/features" style={styles.navLink}>
@@ -36,7 +36,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/(web)/contact" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.contact')}</Text>
-            </Link>
+            </Link> */}
             <Pressable
               style={styles.loginButton}
               onPress={() => router.push("/(auth)/login")}
