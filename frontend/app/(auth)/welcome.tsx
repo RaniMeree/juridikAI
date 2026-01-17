@@ -36,7 +36,7 @@ export default function WelcomeScreen() {
           <View style={styles.logoContainer}>
             <View style={styles.logoGlow} />
             <Image 
-              source={require("@/assets/logo.png")} 
+              source={require("../../../assets/logo.png")} 
               style={styles.logoImage}
               resizeMode="contain"
             />
