@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr
 import uuid
 
 from database import get_db
+from email_service import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -219,10 +220,8 @@ async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Dep
     # Create reset token
     reset_token = create_reset_token(request.email)
     
-    # TODO: Send email with reset link
-    # For now, just log the token (in production, send via email service)
-    print(f"Password reset token for {request.email}: {reset_token}")
-    print(f"Reset link: http://localhost:8081/reset-password?token={reset_token}")
+    # Send email with reset link
+    send_password_reset_email(request.email, reset_token)
     
     return {"message": "If the email exists, a reset link has been sent"}
 
