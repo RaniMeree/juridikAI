@@ -49,21 +49,32 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <View style={styles.hero}>
-        <Text style={styles.heroTitle}>{t('web.heroTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{t('web.heroSubtitle')}</Text>
-        <View style={styles.ctaButtons}>
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => router.push("/(auth)/signup")}
-          >
-            <Text style={styles.primaryButtonText}>{t('web.getStarted')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => router.push("/(web)/features")}
-          >
-            <Text style={styles.secondaryButtonText}>{t('web.learnMore')}</Text>
-          </Pressable>
+        <View style={styles.heroContent}>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>{t('web.heroTitle')}</Text>
+            <Text style={styles.heroSubtitle}>{t('web.heroSubtitle')}</Text>
+            <View style={styles.ctaButtons}>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.push("/(auth)/signup")}
+              >
+                <Text style={styles.primaryButtonText}>{t('web.getStarted')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => router.push("/(web)/features")}
+              >
+                <Text style={styles.secondaryButtonText}>{t('web.learnMore')}</Text>
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={require("../../assets/lagboken1.jpg")} 
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          </View>
         </View>
       </View>
 
@@ -203,24 +214,44 @@ const styles = StyleSheet.create({
   hero: {
     paddingVertical: 100,
     paddingHorizontal: 40,
+  },
+  heroContent: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    maxWidth: 1200,
+    marginHorizontal: "auto",
+    gap: 60,
+  },
+  heroText: {
+    flex: 1,
   },
   heroTitle: {
     fontSize: 56,
     fontWeight: "800",
     color: "#FFFFFF",
-    textAlign: "center",
     marginBottom: 24,
-    maxWidth: 800,
     letterSpacing: -1,
   },
   heroSubtitle: {
     fontSize: 20,
     color: "#94A3B8",
-    textAlign: "center",
     marginBottom: 48,
-    maxWidth: 600,
     lineHeight: 32,
+  },
+  heroImageContainer: {
+    flex: 1,
+    borderRadius: 24,
+    overflow: "hidden",
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 15,
+  },
+  heroImage: {
+    width: "100%",
+    height: 400,
   },
   ctaButtons: {
     flexDirection: "row",
