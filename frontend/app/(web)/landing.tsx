@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Image } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
@@ -11,7 +11,14 @@ export default function LandingPage() {
       {/* Header/Navigation */}
       <View style={styles.header}>
         <View style={styles.nav}>
-          <Text style={styles.logo}>Juridik AI</Text>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require("../../assets/logo.png")} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>Juridik AI</Text>
+          </View>
           <View style={styles.navLinks}>
             <Link href="/(web)/landing" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.home')}</Text>
@@ -141,6 +148,20 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     marginHorizontal: "auto",
     width: "100%",
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#6366F1",
   },
   logo: {
     fontSize: 24,
