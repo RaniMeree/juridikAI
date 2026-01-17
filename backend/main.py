@@ -1,13 +1,27 @@
 """
-Example FastAPI app showing how to connect to the database
+FastAPI Backend for Juridik AI
 """
 
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from database import get_db, test_connection, close_db
+from routes.auth import router as auth_router
 
 app = FastAPI(title="Juridik AI API", version="1.0.0")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8081", "http://localhost:8082"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(auth_router, prefix="/api")
 
 
 @app.on_event("startup")

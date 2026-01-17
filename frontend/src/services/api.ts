@@ -34,7 +34,19 @@ export const api = axios.create({
 // Request interceptor - add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync("auth_token");
+    let token = null;
+    try {
+      if (Platform.OS === 'web') {
+        // Use localStorage on web
+        token = typeof window !== 'undefined' ? localStorage.getItem("auth_token") : null;
+      } else {
+        // Use SecureStore on mobile
+        token = await SecureStore.getItemAsync("auth_token");
+      }
+    } catch (e) {
+      console.error('Error getting token:', e);
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -56,7 +68,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = await SecureStore.getItemAsync("refresh_token");
+        let refreshToken = null;
+        if (Platform.OS === 'web') {
+          refreshToken = typeof window !== 'undefined' ? localStorage.getItem("refresh_token") : null;
+        } else {
+          refreshToken = await SecureStore.getItemAsync("refresh_token");
+        }
+        
         if (!refreshToken) throw new Error("No refresh token");
 
         const response = await axios.post(`${getBaseUrl()}/auth/refresh`, {
@@ -64,15 +82,29 @@ api.interceptors.response.use(
         });
 
         const { accessToken } = response.data;
-        await SecureStore.setItemAsync("auth_token", accessToken);
+        
+        if (Platform.OS === 'web') {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem("auth_token", accessToken);
+          }
+        } else {
+          await SecureStore.setItemAsync("auth_token", accessToken);
+        }
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - logout user
-        await SecureStore.deleteItemAsync("auth_token");
-        await SecureStore.deleteItemAsync("refresh_token");
+        if (Platform.OS === 'web') {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem("auth_token");
+            localStorage.removeItem("refresh_token");
+          }
+        } else {
+          await SecureStore.deleteItemAsync("auth_token");
+          await SecureStore.deleteItemAsync("refresh_token");
+        }
 
         // Redirect to login will happen via auth state change
         return Promise.reject(refreshError);

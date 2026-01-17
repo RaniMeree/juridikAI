@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -24,7 +24,11 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         {/* Logo / Icon */}
         <View style={styles.logo}>
-          <Text style={styles.logoText}>A</Text>
+          <Image 
+            source={require("@/assets/logo.png")} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Title */}
@@ -36,7 +40,7 @@ export default function WelcomeScreen() {
         </Text>
 
         {/* Features */}
-        <View style={styles.features}>
+        {/* <View style={styles.features}>
           <FeatureItem
             icon="⚖️"
             text={t("onboarding.slide1.description")}
@@ -49,7 +53,7 @@ export default function WelcomeScreen() {
             icon="🇸🇪"
             text={t("onboarding.slide3.description")}
           />
-        </View>
+        </View> */}
 
         {/* Buttons */}
         <View style={styles.buttons}>
@@ -109,6 +113,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 32,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
   logoText: {
     color: colors.white,

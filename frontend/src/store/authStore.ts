@@ -60,23 +60,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const response = await api.post("/auth/login", { email, password });
-      const { user, subscription, accessToken, refreshToken } = response.data;
+      const { user, access_token } = response.data;
 
       // Store tokens securely
       try {
-        await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        await SecureStore.setItemAsync(TOKEN_KEY, access_token);
       } catch (e) {
         // SecureStore not available (web), use localStorage
         if (typeof window !== 'undefined') {
-          localStorage.setItem(TOKEN_KEY, accessToken);
-          localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+          localStorage.setItem(TOKEN_KEY, access_token);
         }
       }
 
       set({
         user,
-        subscription,
+        subscription: null,
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -94,24 +92,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await api.post("/auth/signup", data);
-      const { user, subscription, accessToken, refreshToken } = response.data;
+      console.log('Signup attempt:', { email: data.email, firstName: data.firstName, lastName: data.lastName });
+      const response = await api.post("/auth/signup", {
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+      });
+      console.log('Signup response:', response.data);
+      const { user, access_token } = response.data;
 
       // Store tokens securely
       try {
-        await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+        await SecureStore.setItemAsync(TOKEN_KEY, access_token);
       } catch (e) {
         // SecureStore not available (web), use localStorage
         if (typeof window !== 'undefined') {
-          localStorage.setItem(TOKEN_KEY, accessToken);
-          localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+          localStorage.setItem(TOKEN_KEY, access_token);
         }
       }
 
       set({
         user,
-        subscription,
+        subscription: null,
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -119,7 +122,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       return true;
     } catch (error: any) {
-      const message = error.response?.data?.message || "Signup failed";
+      console.error('Signup error:', error);
+      console.error('Error response:', error.response?.data);
+      const message = error.response?.data?.message || error.response?.data?.detail || "Signup failed";
       set({ isLoading: false, error: message });
       return false;
     }

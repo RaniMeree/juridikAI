@@ -7,6 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "expo export:web",
+    "serve": "serve dist",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -33,6 +35,7 @@
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.13",
+    "serve": "^14.2.1",
     "zod": "^3.22.0",
     "zustand": "^4.4.7"
   },

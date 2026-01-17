@@ -70,8 +70,9 @@ async def get_db() -> AsyncSession:
 async def test_connection():
     """Test database connection"""
     try:
+        from sqlalchemy import text
         async with engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         print("✓ Database connection successful!")
         return True
     except Exception as e:
