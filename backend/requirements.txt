@@ -13,7 +13,7 @@ python-dotenv==1.0.0
 sendgrid==6.11.0
 
 # Database (Async PostgreSQL)
-sqlalchemy[asyncio]==2.0.25
+sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 psycopg2-binary==2.9.9  # For pgvector
 alembic==1.13.1  # Database migrations
