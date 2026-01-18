@@ -18,7 +18,13 @@ app = FastAPI(title="Juridik AI API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://localhost:8082"],
+    allow_origins=[
+        "http://localhost:8081", 
+        "http://localhost:8082",
+        "https://juridikai.onrender.com",  # Production frontend
+        "http://localhost:19006",  # Expo web
+        "*"  # Allow all for now - restrict later
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
