@@ -14,7 +14,7 @@ sendgrid==6.11.0
 
 # Database (Async PostgreSQL)
 sqlalchemy[asyncio]==2.0.25
-asyncpg==0.29.0
+asyncpg==0.30.0
 psycopg2-binary==2.9.9  # For pgvector
 alembic==1.13.1  # Database migrations
 
@@ -31,7 +31,7 @@ bcrypt==4.1.2
 openai==1.10.0
 langchain==0.1.4
 langchain-openai==0.0.5
-tiktoken==0.5.2  # Token counting
+tiktoken==0.8.0  # Token counting
 
 # Document Processing
 pypdf2==3.0.1
