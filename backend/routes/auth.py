@@ -4,7 +4,9 @@ Authentication routes for Juridik AI
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, Column, String, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import declarative_base
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
@@ -13,6 +15,25 @@ import uuid
 
 from database import get_db
 from email_service import send_password_reset_email
+
+# User model (must be defined before use)
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    
+    user_id = Column(UUID(as_uuid=True), primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(100))
+    last_name = Column(String(100))
+    phone = Column(String(20))
+    role = Column(String(20))
+    account_status = Column(String(20))
+    email_verified = Column(Boolean)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+    last_login_at = Column(DateTime)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -256,27 +277,3 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depen
     await db.commit()
     
     return {"message": "Password successfully reset"}
-
-
-# User model (simplified)
-from sqlalchemy import Column, String, Boolean, DateTime
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
-
-class User(Base):
-    __tablename__ = "users"
-    
-    user_id = Column(UUID(as_uuid=True), primary_key=True)
-    email = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    first_name = Column(String(100))
-    last_name = Column(String(100))
-    phone = Column(String(20))
-    role = Column(String(20))
-    account_status = Column(String(20))
-    email_verified = Column(Boolean)
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
-    last_login_at = Column(DateTime)
