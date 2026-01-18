@@ -12,6 +12,10 @@ const isDev = Constants.expoConfig?.extra?.isDev ?? __DEV__ ?? false;
 
 // API base URL - change this for different environments
 const getBaseUrl = () => {
+  // Use environment variable if available
+  const envUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (envUrl) return envUrl;
+  
   if (isDev) {
     // Development
     if (Platform.OS === "android") {
@@ -19,8 +23,8 @@ const getBaseUrl = () => {
     }
     return "http://localhost:8000/api"; // iOS / Web
   }
-  // Production
-  return "https://api.annalegal.se/api";
+  // Production - update this with your Render backend URL
+  return "https://juridikai-1.onrender.com/api";
 };
 
 export const api = axios.create({
