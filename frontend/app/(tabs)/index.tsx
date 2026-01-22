@@ -145,6 +145,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.dark700,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   headerTitle: {
     color: colors.white,
@@ -160,6 +163,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   emptyIcon: {
     width: 80,
@@ -194,12 +200,18 @@ const styles = StyleSheet.create({
   messagesList: {
     padding: 16,
     paddingBottom: 8,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   inputContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.dark700,
     backgroundColor: colors.dark800,
     padding: 16,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   inputRow: {
     flexDirection: "row",

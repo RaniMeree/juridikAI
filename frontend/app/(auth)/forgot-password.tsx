@@ -140,9 +140,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark900,
     justifyContent: "center",
     paddingHorizontal: 24,
+    alignItems: "center",
   },
   successContent: {
     alignItems: "center",
+    width: "100%",
+    maxWidth: 480,
   },
   successIcon: {
     width: 80,
@@ -178,6 +181,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
   },
   backButton: {
     position: "absolute",

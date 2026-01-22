@@ -151,6 +151,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
   },
   header: {
     marginBottom: 32,
