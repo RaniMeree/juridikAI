@@ -72,8 +72,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
+      // Set authorization header for future requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
       set({
-        user,
+        user: {
+          id: user.user_id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role || 'user',
+        },
         subscription: null,
         isAuthenticated: true,
         isLoading: false,
@@ -123,8 +132,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
+      // Set authorization header for future requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
       set({
-        user,
+        user: {
+          id: user.user_id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role || 'user',
+        },
         subscription: null,
         isAuthenticated: true,
         isLoading: false,
@@ -160,6 +178,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       // Ignore logout errors
     }
+
+    // Clear authorization header
+    delete api.defaults.headers.common['Authorization'];
 
     // Clear tokens
     try {
@@ -202,23 +223,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      // Verify token with server (will fail if no backend)
+      // Set the token in API headers
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Try to verify token with server
       try {
         const response = await api.get("/auth/me");
-        const { user, subscription } = response.data;
+        const userData = response.data;
 
         set({
-          user,
-          subscription,
+          user: {
+            id: userData.user_id,
+            email: userData.email,
+            firstName: userData.first_name,
+            lastName: userData.last_name,
+            role: userData.role || 'user',
+          },
+          subscription: null,
           isAuthenticated: true,
           isLoading: false,
         });
-      } catch (apiError) {
-        // API call failed (no backend), treat as not authenticated
+      } catch (apiError: any) {
+        console.log('API verification failed, but keeping user logged in with stored token');
+        // API call failed but token exists - keep user logged in
+        // This allows offline usage or when backend is down
         set({
-          user: null,
+          user: null, // We don't have user data, but they have a token
           subscription: null,
-          isAuthenticated: false,
+          isAuthenticated: true, // Trust the stored token
           isLoading: false,
         });
       }

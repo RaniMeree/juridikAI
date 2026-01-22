@@ -195,9 +195,19 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     }
 
 
+from fastapi import Header
+
 @router.get("/me")
-async def get_current_user(token: str, db: AsyncSession = Depends(get_db)):
+async def get_current_user(
+    authorization: str = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
     """Get current user info"""
+    
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    
+    token = authorization.replace("Bearer ", "")
     
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
