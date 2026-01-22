@@ -82,7 +82,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       return true;
     } catch (error: any) {
-      const message = error.response?.data?.message || "Login failed";
+      let message = "Login failed";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data.message === 'string') {
+          message = data.message;
+        } else if (typeof data.detail === 'string') {
+          message = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          // Handle FastAPI validation errors
+          message = data.detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
+        }
+      }
       set({ isLoading: false, error: message });
       return false;
     }
@@ -124,7 +135,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error('Signup error:', error);
       console.error('Error response:', error.response?.data);
-      const message = error.response?.data?.message || error.response?.data?.detail || "Signup failed";
+      
+      let message = "Signup failed";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data.message === 'string') {
+          message = data.message;
+        } else if (typeof data.detail === 'string') {
+          message = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          // Handle FastAPI validation errors
+          message = data.detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
+        }
+      }
+      
       set({ isLoading: false, error: message });
       return false;
     }

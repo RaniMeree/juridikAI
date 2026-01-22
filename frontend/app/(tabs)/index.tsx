@@ -57,33 +57,35 @@ export default function ChatScreen() {
         style={styles.flex1}
         keyboardVerticalOffset={0}
       >
-        {/* Messages List */}
-        {messages.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIcon}>
-              <Text style={styles.emptyEmoji}>⚖️</Text>
+        <View style={styles.messagesContainer}>
+          {/* Messages List */}
+          {messages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Text style={styles.emptyEmoji}>⚖️</Text>
+              </View>
+              <Text style={styles.emptyTitle}>
+                {t("chat.noChats")}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {t("chat.startChat")}
+              </Text>
+              <Text style={styles.emptyDisclaimer}>
+                {t("legal.disclaimer")}
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>
-              {t("chat.noChats")}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {t("chat.startChat")}
-            </Text>
-            <Text style={styles.emptyDisclaimer}>
-              {t("legal.disclaimer")}
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ChatBubble message={item} />}
-            contentContainerStyle={styles.messagesList}
-            showsVerticalScrollIndicator={false}
-            ListFooterComponent={isLoading ? <TypingIndicator /> : null}
-          />
-        )}
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ChatBubble message={item} />}
+              contentContainerStyle={styles.messagesList}
+              showsVerticalScrollIndicator={false}
+              ListFooterComponent={isLoading ? <TypingIndicator /> : null}
+            />
+          )}
+        </View>
 
         {/* Input Area */}
         <View style={styles.inputContainer}>
@@ -165,7 +167,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     width: "100%",
     maxWidth: 768,
-    alignSelf: "center",
   },
   emptyIcon: {
     width: 80,
@@ -197,12 +198,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 32,
   },
+  messagesContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
   messagesList: {
     padding: 16,
     paddingBottom: 8,
     width: "100%",
     maxWidth: 768,
-    alignSelf: "center",
   },
   inputContainer: {
     borderTopWidth: 1,
