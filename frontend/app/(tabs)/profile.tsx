@@ -22,10 +22,10 @@ const colors = {
 
 export default function ProfileScreen() {
   const { t, changeLanguage, currentLanguage, supportedLanguages } = useTranslation();
-  const { user, logout, subscription } = useAuthStore();
+  const { user, logout, deleteAccount, subscription } = useAuthStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       t("auth.logout"),
       "Are you sure you want to log out?",
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     Alert.alert(
       t("profile.deleteAccount"),
       t("profile.deleteAccountConfirm"),
@@ -52,7 +52,14 @@ export default function ProfileScreen() {
         { 
           text: t("common.delete"), 
           style: "destructive",
-          onPress: () => {/* TODO: Implement delete account */}
+          onPress: async () => {
+            const success = await deleteAccount();
+            if (success) {
+              router.replace("/(auth)/welcome");
+            } else {
+              Alert.alert(t("common.error"), "Failed to delete account. Please try again.");
+            }
+          }
         },
       ]
     );
@@ -232,6 +239,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.dark700,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   headerTitle: {
     color: colors.white,
@@ -243,6 +253,9 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     borderBottomWidth: 1,
     borderBottomColor: colors.dark700,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   userRow: {
     flexDirection: "row",
@@ -287,6 +300,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.dark700,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   sectionTitle: {
     color: colors.dark400,
@@ -395,5 +411,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 32,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
 });

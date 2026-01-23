@@ -180,6 +180,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   headerTitle: {
     color: colors.white,
@@ -201,6 +204,9 @@ const styles = StyleSheet.create({
   },
   documentsList: {
     padding: 16,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   documentCard: {
     backgroundColor: colors.dark800,
@@ -266,6 +272,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
   emptyIcon: {
     width: 80,

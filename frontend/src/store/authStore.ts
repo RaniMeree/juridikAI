@@ -34,6 +34,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (data: SignupData) => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
 }
@@ -201,6 +202,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
       error: null,
     });
+  },
+
+  deleteAccount: async () => {
+    try {
+      await api.delete("/auth/account");
+      
+      // Clear authorization header
+      delete api.defaults.headers.common['Authorization'];
+
+      // Clear tokens
+      try {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      } catch (e) {
+        // SecureStore not available (web), use localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+        }
+      }
+
+      set({
+        user: null,
+        subscription: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      return false;
+    }
   },
 
   checkAuth: async () => {

@@ -287,3 +287,39 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depen
     await db.commit()
     
     return {"message": "Password successfully reset"}
+
+
+@router.delete("/account")
+async def delete_account(
+    authorization: str = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete user account"""
+    
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Find and delete user
+    result = await db.execute(
+        select(User).where(User.user_id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete user (cascading deletes will handle related data)
+    await db.delete(user)
+    await db.commit()
+    
+    return {"message": "Account successfully deleted"}
