@@ -6,6 +6,7 @@
 export default {
   // Common
   common: {
+    hello: 'Hej',
     loading: 'Laddar...',
     error: 'Något gick fel',
     retry: 'Försök igen',
@@ -22,6 +23,27 @@ export default {
     noResults: 'Inga resultat hittades',
     yes: 'Ja',
     no: 'Nej',
+  },
+
+  // Home
+  home: {
+    welcomeMessage: 'Hur kan jag hjälpa dig med juridiska frågor idag?',
+    quickActions: 'Snabbåtgärder',
+    startChat: 'Starta ny chatt',
+    startChatDescription: 'Ställ juridiska frågor och få AI-drivna svar',
+    uploadDocument: 'Ladda upp dokument',
+    uploadDocumentDescription: 'Analysera juridiska dokument med AI',
+    viewProfile: 'Visa profil',
+    viewProfileDescription: 'Hantera ditt konto och prenumeration',
+    features: 'Funktioner',
+    legalAdvice: 'Juridisk rådgivning',
+    legalAdviceDescription: 'Få omedelbar svar på juridiska frågor',
+    documentAnalysis: 'Dokumentanalys',
+    documentAnalysisDescription: 'Ladda upp och analysera juridiska dokument',
+    multiLanguage: 'Flera språk',
+    multiLanguageDescription: 'Stöd för engelska och svenska',
+    secure: 'Säker & privat',
+    secureDescription: 'Din data är krypterad och skyddad',
   },
 
   // Authentication

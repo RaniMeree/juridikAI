@@ -12,8 +12,8 @@ const colors = {
 // Tab bar icons (using emoji for now - replace with proper icons later)
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
+    home: "🏠",
     chat: "💬",
-    documents: "📄",
     profile: "👤",
   };
 
@@ -46,17 +46,17 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="home"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: "Chat",
           tabBarIcon: ({ focused }) => <TabIcon name="chat" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="documents"
-        options={{
-          title: "Documents",
-          tabBarIcon: ({ focused }) => <TabIcon name="documents" focused={focused} />,
         }}
       />
       <Tabs.Screen

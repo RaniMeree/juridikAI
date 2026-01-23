@@ -6,6 +6,7 @@
 export default {
   // Common
   common: {
+    hello: 'Hello',
     loading: 'Loading...',
     error: 'Something went wrong',
     retry: 'Try Again',
@@ -22,6 +23,27 @@ export default {
     noResults: 'No results found',
     yes: 'Yes',
     no: 'No',
+  },
+
+  // Home
+  home: {
+    welcomeMessage: 'How can I help you with legal matters today?',
+    quickActions: 'Quick Actions',
+    startChat: 'Start New Chat',
+    startChatDescription: 'Ask legal questions and get AI-powered answers',
+    uploadDocument: 'Upload Document',
+    uploadDocumentDescription: 'Analyze legal documents with AI',
+    viewProfile: 'View Profile',
+    viewProfileDescription: 'Manage your account and subscription',
+    features: 'Features',
+    legalAdvice: 'Legal Advice',
+    legalAdviceDescription: 'Get instant answers to legal questions',
+    documentAnalysis: 'Document Analysis',
+    documentAnalysisDescription: 'Upload and analyze legal documents',
+    multiLanguage: 'Multi-Language',
+    multiLanguageDescription: 'Support for English and Swedish',
+    secure: 'Secure & Private',
+    secureDescription: 'Your data is encrypted and protected',
   },
 
   // Authentication
