@@ -289,15 +289,19 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depen
     return {"message": "Password successfully reset"}
 
 
-@router.delete("/account")
-async def delete_account(
-    authorization: str = Header(None),
-    db: AsyncSession = Depends(get_db)
-):
-    """Delete user account"""
+@router.post("/logout")
+async def logout(authorization: str = Header(None)):
+    """
+    Logout user - invalidate token
+    Since we're using JWT, the actual token invalidation happens on client side
+    This endpoint exists for consistency and can be extended for token blacklisting
+    """
     
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header"
+        )
     
     token = authorization.replace("Bearer ", "")
     
@@ -305,9 +309,50 @@ async def delete_account(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    
+    # TODO: Add token to blacklist if implementing token blacklisting
+    # For now, client-side token removal is sufficient
+    
+    return {"message": "Successfully logged out"}
+
+
+@router.delete("/account")
+async def delete_account(
+    authorization: str = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete user account permanently"""
+    
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header"
+        )
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
     
     # Find and delete user
     result = await db.execute(
@@ -316,10 +361,14 @@ async def delete_account(
     user = result.scalar_one_or_none()
     
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
     
     # Delete user (cascading deletes will handle related data)
     await db.delete(user)
     await db.commit()
     
     return {"message": "Account successfully deleted"}
+
