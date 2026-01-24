@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Alert, Switch, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert, Switch, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -26,43 +26,75 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleLogout = async () => {
-    Alert.alert(
-      t("auth.logout"),
-      "Are you sure you want to log out?",
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { 
-          text: t("auth.logout"), 
-          style: "destructive", 
-          onPress: async () => {
-            await logout();
-            router.replace("/(auth)/welcome");
-          }
-        },
-      ]
-    );
+    console.log("Logout button clicked!");
+    
+    // For web, use window.confirm instead of Alert.alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to log out?");
+      if (confirmed) {
+        console.log("Logout confirmed, calling logout...");
+        await logout();
+        router.replace("/(auth)/welcome");
+      }
+    } else {
+      Alert.alert(
+        t("auth.logout"),
+        "Are you sure you want to log out?",
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          { 
+            text: t("auth.logout"), 
+            style: "destructive", 
+            onPress: async () => {
+              console.log("Logout confirmed, calling logout...");
+              await logout();
+              router.replace("/(auth)/welcome");
+            }
+          },
+        ]
+      );
+    }
   };
 
   const handleDeleteAccount = async () => {
-    Alert.alert(
-      t("profile.deleteAccount"),
-      t("profile.deleteAccountConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { 
-          text: t("common.delete"), 
-          style: "destructive",
-          onPress: async () => {
-            const success = await deleteAccount();
-            if (success) {
-              router.replace("/(auth)/welcome");
-            } else {
-              Alert.alert(t("common.error"), "Failed to delete account. Please try again.");
+    console.log("Delete account button clicked!");
+    
+    // For web, use window.confirm instead of Alert.alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to delete your account? This action cannot be undone.");
+      if (confirmed) {
+        console.log("Delete account confirmed, calling deleteAccount...");
+        const success = await deleteAccount();
+        console.log("Delete account result:", success);
+        if (success) {
+          router.replace("/(auth)/welcome");
+        } else {
+          window.alert("Failed to delete account. Please try again.");
+        }
+      }
+    } else {
+      Alert.alert(
+        t("profile.deleteAccount"),
+        t("profile.deleteAccountConfirm"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          { 
+            text: t("common.delete"), 
+            style: "destructive",
+            onPress: async () => {
+              console.log("Delete account confirmed, calling deleteAccount...");
+              const success = await deleteAccount();
+              console.log("Delete account result:", success);
+              if (success) {
+                router.replace("/(auth)/welcome");
+              } else {
+                Alert.alert(t("common.error"), "Failed to delete account. Please try again.");
+              }
             }
-          }
-        },
-      ]
-    );
+          },
+        ]
+      );
+    }
   };
 
   const MenuItem = ({ 
