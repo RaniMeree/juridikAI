@@ -33,8 +33,8 @@ const getDeviceLanguage = (): string => {
 // Initialize i18n
 i18n.use(initReactI18next).init({
   resources,
-  lng: getDeviceLanguage(),
-  fallbackLng: 'en',
+  lng: 'sv', // Default to Swedish
+  fallbackLng: 'sv',
   interpolation: {
     escapeValue: false,
   },

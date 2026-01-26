@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
-export default function FeaturesPage() {
+export default function PricingPage() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
 
@@ -22,10 +22,10 @@ export default function FeaturesPage() {
               <Text style={styles.navLinkText}>{t('web.home')}</Text>
             </Link>
             <Link href="/(web)/features" style={styles.navLink}>
-              <Text style={[styles.navLinkText, styles.activeLink]}>{t('web.features')}</Text>
+              <Text style={styles.navLinkText}>{t('web.features')}</Text>
             </Link>
             <Link href="/(web)/pricing" style={styles.navLink}>
-              <Text style={styles.navLinkText}>{t('web.pricing')}</Text>
+              <Text style={[styles.navLinkText, styles.activeLink]}>{t('web.pricing')}</Text>
             </Link>
             <Link href="/(web)/about" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.about')}</Text>
@@ -51,82 +51,75 @@ export default function FeaturesPage() {
 
       {/* Hero */}
       <View style={styles.hero}>
-        <Text style={styles.heroTitle}>{t('web.featuresTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{t('web.featuresSubtitle')}</Text>
+        <Text style={styles.heroTitle}>{t('web.pricing')}</Text>
+        <Text style={styles.heroSubtitle}>
+          Choose the perfect plan for your legal needs
+        </Text>
       </View>
 
-      {/* Features Grid */}
+      {/* Pricing Grid */}
       <View style={styles.content}>
-        <View style={styles.featuresSection}>
-          <View style={styles.featureRow}>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>💬</Text>
-              <Text style={styles.featureTitle}>{t('web.aiChat')}</Text>
-              <Text style={styles.featureDescription}>
-                {t('web.aiChatDesc')}
+        <View style={styles.pricingSection}>
+          <View style={styles.pricingGrid}>
+            <View style={styles.pricingCard}>
+              <Text style={styles.planName}>{t('web.freePlan')}</Text>
+              <Text style={styles.price}>
+                0 kr<Text style={styles.period}>/mån</Text>
               </Text>
+              <View style={styles.features}>
+                <Text style={styles.feature}>✓ 10 frågor per dag</Text>
+                <Text style={styles.feature}>✓ Grundläggande funktioner</Text>
+                <Text style={styles.feature}>✓ E-post support</Text>
+              </View>
+              <Pressable
+                style={styles.planButton}
+                onPress={() => router.push("/(auth)/signup")}
+              >
+                <Text style={styles.planButtonText}>{t('web.getStarted')}</Text>
+              </Pressable>
             </View>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>📄</Text>
-              <Text style={styles.featureTitle}>{t('web.docAnalysis')}</Text>
-              <Text style={styles.featureDescription}>
-                {t('web.docAnalysisDesc')}
+
+            <View style={[styles.pricingCard, styles.popularCard]}>
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>POPULÄR</Text>
+              </View>
+              <Text style={styles.planName}>{t('web.proPlan')}</Text>
+              <Text style={styles.price}>
+                199 kr<Text style={styles.period}>/mån</Text>
               </Text>
+              <View style={styles.features}>
+                <Text style={styles.feature}>✓ Obegränsade frågor</Text>
+                <Text style={styles.feature}>✓ Alla funktioner</Text>
+                <Text style={styles.feature}>✓ Dokumentanalys</Text>
+                <Text style={styles.feature}>✓ Prioriterad support</Text>
+              </View>
+              <Pressable
+                style={[styles.planButton, styles.primaryPlanButton]}
+                onPress={() => router.push("/(auth)/signup")}
+              >
+                <Text style={styles.primaryPlanButtonText}>
+                  {t('web.choosePlan')}
+                </Text>
+              </Pressable>
             </View>
-          </View>
 
-          <View style={styles.featureRow}>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>🌍</Text>
-              <Text style={styles.featureTitle}>{t('web.multilingual')}</Text>
-              <Text style={styles.featureDescription}>
-                {t('web.multilingualDesc')}
+            <View style={styles.pricingCard}>
+              <Text style={styles.planName}>{t('web.businessPlan')}</Text>
+              <Text style={styles.price}>
+                999 kr<Text style={styles.period}>/mån</Text>
               </Text>
-            </View>
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>👨‍⚖️</Text>
-              <Text style={styles.featureTitle}>Expert Legal Consultation</Text>
-              <Text style={styles.featureDescription}>
-                Get in touch with the best lawyers for complex cases with reasonable prices. Professional guidance when you need it most.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* How it Works */}
-        <View style={styles.howItWorksSection}>
-          <Text style={styles.sectionTitle}>{t('web.howItWorks')}</Text>
-          <View style={styles.stepsContainer}>
-            <View style={styles.step}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>1</Text>
+              <View style={styles.features}>
+                <Text style={styles.feature}>✓ Allt i Pro</Text>
+                <Text style={styles.feature}>✓ Team-samarbete</Text>
+                <Text style={styles.feature}>✓ Anpassad AI</Text>
+                <Text style={styles.feature}>✓ 24/7 support</Text>
               </View>
-              <Text style={styles.stepTitle}>{t('web.step1Title')}</Text>
-              <Text style={styles.stepDescription}>{t('web.step1Desc')}</Text>
-            </View>
-
-            <View style={styles.step}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={styles.stepTitle}>{t('web.step2Title')}</Text>
-              <Text style={styles.stepDescription}>{t('web.step2Desc')}</Text>
-            </View>
-
-            <View style={styles.step}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={styles.stepTitle}>{t('web.step3Title')}</Text>
-              <Text style={styles.stepDescription}>{t('web.step3Desc')}</Text>
-            </View>
-
-            <View style={styles.step}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>4</Text>
-              </View>
-              <Text style={styles.stepTitle}>{t('web.step4Title')}</Text>
-              <Text style={styles.stepDescription}>{t('web.step4Desc')}</Text>
+              <Pressable
+                style={styles.planButton}
+                onPress={() => router.push("/(web)/contact")}
+              >
+                <Text style={styles.planButtonText}>{t('web.contactSales')}</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -240,94 +233,91 @@ const styles = StyleSheet.create({
   content: {
     paddingVertical: 60,
   },
-  featuresSection: {
+  pricingSection: {
     maxWidth: 1200,
     marginHorizontal: "auto",
     paddingHorizontal: 40,
-    marginBottom: 80,
   },
-  featureRow: {
+  pricingGrid: {
     flexDirection: "row",
     gap: 30,
-    marginBottom: 30,
     flexWrap: "wrap",
     justifyContent: "center",
   },
-  featureCard: {
+  pricingCard: {
     backgroundColor: "#F8FAFC",
     padding: 40,
     borderRadius: 12,
     flex: 1,
-    minWidth: 350,
-    maxWidth: 500,
+    minWidth: 280,
+    maxWidth: 350,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
   },
-  featureIcon: {
-    fontSize: 48,
-    marginBottom: 20,
+  popularCard: {
+    borderColor: "#6366F1",
+    backgroundColor: "#FFFFFF",
+    transform: [{ scale: 1.05 }],
   },
-  featureTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0F172A",
-    marginBottom: 12,
-  },
-  featureDescription: {
-    fontSize: 16,
-    color: "#64748B",
-    lineHeight: 24,
-  },
-  howItWorksSection: {
-    backgroundColor: "#F8FAFC",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-    marginBottom: 80,
-  },
-  sectionTitle: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: "#0F172A",
-    textAlign: "center",
-    marginBottom: 60,
-  },
-  stepsContainer: {
-    maxWidth: 1000,
-    marginHorizontal: "auto",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 40,
-    justifyContent: "center",
-  },
-  step: {
-    alignItems: "center",
-    flex: 1,
-    minWidth: 200,
-  },
-  stepNumber: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  popularBadge: {
     backgroundColor: "#6366F1",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: "flex-start",
     marginBottom: 20,
   },
-  stepNumberText: {
+  popularText: {
     color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  planName: {
     fontSize: 24,
     fontWeight: "bold",
-  },
-  stepTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
     color: "#0F172A",
-    marginBottom: 12,
-    textAlign: "center",
+    marginBottom: 16,
   },
-  stepDescription: {
-    fontSize: 16,
+  price: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: "#6366F1",
+    marginBottom: 24,
+  },
+  period: {
+    fontSize: 20,
     color: "#64748B",
-    textAlign: "center",
+  },
+  features: {
+    marginBottom: 32,
+    gap: 12,
+  },
+  feature: {
+    fontSize: 16,
+    color: "#475569",
     lineHeight: 24,
+  },
+  planButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#6366F1",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  planButtonText: {
+    color: "#6366F1",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  primaryPlanButton: {
+    backgroundColor: "#6366F1",
+    borderColor: "#6366F1",
+  },
+  primaryPlanButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
   ctaSection: {
     backgroundColor: "#6366F1",

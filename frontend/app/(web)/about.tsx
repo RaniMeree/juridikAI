@@ -3,8 +3,13 @@ import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 export default function AboutPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'sv' ? 'en' : 'sv';
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -19,12 +24,21 @@ export default function AboutPage() {
             <Link href="/(web)/features" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.features')}</Text>
             </Link>
+            <Link href="/(web)/pricing" style={styles.navLink}>
+              <Text style={styles.navLinkText}>{t('web.pricing')}</Text>
+            </Link>
             <Link href="/(web)/about" style={styles.navLink}>
               <Text style={[styles.navLinkText, styles.activeLink]}>{t('web.about')}</Text>
             </Link>
             <Link href="/(web)/contact" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.contact')}</Text>
             </Link>
+            <Pressable
+              style={styles.langButton}
+              onPress={toggleLanguage}
+            >
+              <Text style={styles.langButtonText}>{i18n.language === 'sv' ? '🇸🇪 SV' : '🇬🇧 EN'}</Text>
+            </Pressable>
             <Pressable
               style={styles.loginButton}
               onPress={() => router.push("/(auth)/login")}
@@ -77,13 +91,6 @@ export default function AboutPage() {
             </View>
           </View>
         </View>
-
-        <View style={styles.contentSection}>
-          <Text style={styles.sectionTitle}>{t('web.ourTeam')}</Text>
-          <Text style={styles.paragraph}>
-            {t('web.teamText')}
-          </Text>
-        </View>
       </View>
 
       {/* CTA */}
@@ -98,6 +105,8 @@ export default function AboutPage() {
       </View>
 
       {/* Footer */}
+
+      
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           © 2026 Juridik AI. {t('web.allRightsReserved')}
@@ -157,6 +166,19 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  langButton: {
+    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#6366F1",
+  },
+  langButtonText: {
+    color: "#6366F1",
+    fontSize: 14,
     fontWeight: "600",
   },
   hero: {
