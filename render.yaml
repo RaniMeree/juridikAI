@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: juridik-ai-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npx expo export:web
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
