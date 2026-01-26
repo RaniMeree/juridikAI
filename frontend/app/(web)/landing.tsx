@@ -25,7 +25,7 @@ export default function LandingPage() {
             <Text style={styles.logoText}>Juridik AI</Text>
           </View>
           <View style={styles.navLinks}>
-            {/* <Link href="/(web)/landing" style={styles.navLink}>
+            <Link href="/(web)/landing" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.home')}</Text>
             </Link>
             <Link href="/(web)/features" style={styles.navLink}>
@@ -36,7 +36,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/(web)/contact" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.contact')}</Text>
-            </Link> */}
+            </Link>
             <Pressable
               style={styles.loginButton}
               onPress={() => router.push("/(auth)/login")}
@@ -130,7 +130,7 @@ export default function LandingPage() {
         <Text style={styles.footerText}>
           © 2026 Juridik AI. {t('web.allRightsReserved')}
         </Text>
-        {/* <View style={styles.footerLinks}>
+        <View style={styles.footerLinks}>
           <Link href="/(web)/about" style={styles.footerLink}>
             <Text style={styles.footerLinkText}>{t('web.about')}</Text>
           </Link>
@@ -139,7 +139,7 @@ export default function LandingPage() {
           </Link>
           <Text style={styles.footerLinkText}>{t('web.privacy')}</Text>
           <Text style={styles.footerLinkText}>{t('web.terms')}</Text>
-        </View> */}
+        </View>
       </View>
     </ScrollView>
     </LinearGradient>
