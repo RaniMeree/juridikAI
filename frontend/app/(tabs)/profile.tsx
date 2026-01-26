@@ -218,19 +218,6 @@ export default function ProfileScreen() {
               changeLanguage(nextLang);
             }}
           />
-
-          <MenuItem
-            icon="🔔"
-            title={t("profile.notifications")}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: colors.dark700, true: colors.primary600 }}
-                thumbColor={colors.white}
-              />
-            }
-          />
         </View>
 
         {/* Danger Zone */}
