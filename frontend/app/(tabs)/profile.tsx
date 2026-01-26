@@ -154,9 +154,6 @@ export default function ProfileScreen() {
               </Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
             </View>
-            <Pressable style={styles.editButton}>
-              <Text style={styles.editButtonText}>{t("profile.editProfile")}</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -233,16 +230,6 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Support */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t("profile.help")}
-          </Text>
-          
-          <MenuItem icon="❓" title={t("profile.help")} />
-          <MenuItem icon="ℹ️" title={t("profile.about")} subtitle="Version 1.0.0" />
-        </View>
-
         {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <MenuItem icon="🚪" title={t("auth.logout")} onPress={handleLogout} />
@@ -317,15 +304,6 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     color: colors.dark400,
-  },
-  editButton: {
-    backgroundColor: colors.dark700,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  editButtonText: {
-    color: colors.primary400,
   },
   section: {
     paddingHorizontal: 16,
