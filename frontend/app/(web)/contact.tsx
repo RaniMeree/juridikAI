@@ -2,10 +2,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function ContactPage() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const { isAuthenticated, user } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -55,12 +57,23 @@ export default function ContactPage() {
             >
               <Text style={styles.langButtonText}>{i18n.language === 'sv' ? '🇸🇪 SV' : '🇬🇧 EN'}</Text>
             </Pressable>
-            <Pressable
-              style={styles.loginButton}
-              onPress={() => router.push("/(auth)/login")}
-            >
-              <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
-            </Pressable>
+            {isAuthenticated ? (
+              <Pressable
+                style={styles.loggedInButton}
+                onPress={() => router.push("/(tabs)")}
+              >
+                <Text style={styles.loggedInButtonText}>
+                  {user?.firstName || user?.email?.split('@')[0] || 'User'}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.loginButton}
+                onPress={() => router.push("/(auth)/login")}
+              >
+                <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>

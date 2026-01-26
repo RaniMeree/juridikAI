@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/store/authStore";
 
 export default function FeaturesPage() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const { isAuthenticated, user } = useAuthStore();
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'sv' ? 'en' : 'sv';
@@ -36,12 +38,23 @@ export default function FeaturesPage() {
             >
               <Text style={styles.langButtonText}>{i18n.language === 'sv' ? '🇸🇪 SV' : '🇬🇧 EN'}</Text>
             </Pressable>
-            <Pressable
-              style={styles.loginButton}
-              onPress={() => router.push("/(auth)/login")}
-            >
-              <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
-            </Pressable>
+            {isAuthenticated ? (
+              <Pressable
+                style={styles.loggedInButton}
+                onPress={() => router.push("/(tabs)")}
+              >
+                <Text style={styles.loggedInButtonText}>
+                  {user?.firstName || user?.email?.split('@')[0] || 'User'}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.loginButton}
+                onPress={() => router.push("/(auth)/login")}
+              >
+                <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
