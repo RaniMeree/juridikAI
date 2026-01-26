@@ -285,6 +285,8 @@ export default {
     chatHistoryDesc: 'Access all your previous conversations and insights anytime.',
     multilingual: 'Multilingual Support',
     multilingualDesc: 'Available in Swedish and English with more languages coming soon.',
+    expertConsultation: 'Expert Legal Consultation',
+    expertConsultationDesc: 'Connect with experienced lawyers for complex legal matters. Professional guidance at competitive rates.',
     crossPlatform: 'Cross-Platform',
     crossPlatformDesc: 'Access from web, iOS, or Android - your data syncs everywhere.',
     

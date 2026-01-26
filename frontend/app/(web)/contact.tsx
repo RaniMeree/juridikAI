@@ -37,9 +37,6 @@ export default function ContactPage() {
             <Link href="/(web)/features" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.features')}</Text>
             </Link>
-            <Link href="/(web)/pricing" style={styles.navLink}>
-              <Text style={styles.navLinkText}>{t('web.pricing')}</Text>
-            </Link>
             <Link href="/(web)/about" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.about')}</Text>
             </Link>

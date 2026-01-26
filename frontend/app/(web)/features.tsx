@@ -24,9 +24,6 @@ export default function FeaturesPage() {
             <Link href="/(web)/features" style={styles.navLink}>
               <Text style={[styles.navLinkText, styles.activeLink]}>{t('web.features')}</Text>
             </Link>
-            <Link href="/(web)/pricing" style={styles.navLink}>
-              <Text style={styles.navLinkText}>{t('web.pricing')}</Text>
-            </Link>
             <Link href="/(web)/about" style={styles.navLink}>
               <Text style={styles.navLinkText}>{t('web.about')}</Text>
             </Link>
@@ -85,9 +82,9 @@ export default function FeaturesPage() {
             </View>
             <View style={styles.featureCard}>
               <Text style={styles.featureIcon}>👨‍⚖️</Text>
-              <Text style={styles.featureTitle}>Expert Legal Consultation</Text>
+              <Text style={styles.featureTitle}>{t('web.expertConsultation')}</Text>
               <Text style={styles.featureDescription}>
-                Get in touch with the best lawyers for complex cases with reasonable prices. Professional guidance when you need it most.
+                {t('web.expertConsultationDesc')}
               </Text>
             </View>
           </View>

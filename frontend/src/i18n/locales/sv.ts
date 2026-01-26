@@ -285,6 +285,8 @@ export default {
     chatHistoryDesc: 'Få tillgång till alla dina tidigare konversationer och insikter när som helst.',
     multilingual: 'Flerspråkigt stöd',
     multilingualDesc: 'Tillgänglig på svenska och engelska med fler språk på gång.',
+    expertConsultation: 'Expertkonsultation',
+    expertConsultationDesc: 'Få kontakt med erfarna jurister för komplexa juridiska ärenden. Professionell vägledning till konkurrenskraftiga priser.',
     crossPlatform: 'Multiplattform',
     crossPlatformDesc: 'Åtkomst från webb, iOS eller Android - din data synkroniseras överallt.',
     
