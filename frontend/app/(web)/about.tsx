@@ -191,6 +191,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  loggedInButton: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  loggedInButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   hero: {
     backgroundColor: "#0F172A",
     paddingVertical: 60,
