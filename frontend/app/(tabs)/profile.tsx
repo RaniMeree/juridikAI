@@ -233,16 +233,6 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Support */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t("profile.help")}
-          </Text>
-          
-          <MenuItem icon="❓" title={t("profile.help")} />
-          <MenuItem icon="ℹ️" title={t("profile.about")} subtitle="Version 1.0.0" />
-        </View>
-
         {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <MenuItem icon="🚪" title={t("auth.logout")} onPress={handleLogout} />
