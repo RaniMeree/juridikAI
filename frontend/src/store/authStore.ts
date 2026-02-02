@@ -61,15 +61,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const response = await api.post("/auth/login", { email, password });
-      const { user, access_token } = response.data;
+      const { user, access_token, refresh_token } = response.data;
 
       // Store tokens securely
       try {
         await SecureStore.setItemAsync(TOKEN_KEY, access_token);
+        if (refresh_token) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refresh_token);
+        }
       } catch (e) {
         // SecureStore not available (web), use localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem(TOKEN_KEY, access_token);
+          if (refresh_token) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
+          }
         }
       }
 
@@ -121,15 +127,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         last_name: data.lastName,
       });
       console.log('Signup response:', response.data);
-      const { user, access_token } = response.data;
+      const { user, access_token, refresh_token } = response.data;
 
       // Store tokens securely
       try {
         await SecureStore.setItemAsync(TOKEN_KEY, access_token);
+        if (refresh_token) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refresh_token);
+        }
       } catch (e) {
         // SecureStore not available (web), use localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem(TOKEN_KEY, access_token);
+          if (refresh_token) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
+          }
         }
       }
 
@@ -279,13 +291,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         });
       } catch (apiError: any) {
-        console.log('API verification failed, but keeping user logged in with stored token');
-        // API call failed but token exists - keep user logged in
-        // This allows offline usage or when backend is down
+        // Token verification failed - clear invalid tokens and log out
+        console.log('Token verification failed, logging out user');
+        
+        // Clear authorization header
+        delete api.defaults.headers.common['Authorization'];
+        
+        // Clear tokens
+        try {
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        } catch (e) {
+          // SecureStore not available (web)
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(REFRESH_TOKEN_KEY);
+          }
+        }
+        
         set({
-          user: null, // We don't have user data, but they have a token
+          user: null,
           subscription: null,
-          isAuthenticated: true, // Trust the stored token
+          isAuthenticated: false,
           isLoading: false,
         });
       }

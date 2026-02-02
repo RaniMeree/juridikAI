@@ -44,6 +44,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = "juridik-ai-secret-key-2026-change-this-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 
 class SignupRequest(BaseModel):
@@ -70,8 +71,13 @@ class ResetPasswordRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
     user: dict
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 def hash_password(password: str) -> str:
@@ -85,7 +91,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -143,11 +157,14 @@ async def signup(request: SignupRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
     
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
+    # Create access and refresh tokens
+    token_data = {"sub": str(user.user_id), "email": user.email}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
     
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "user_id": str(user.user_id),
@@ -179,11 +196,14 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     user.last_login_at = datetime.utcnow()
     await db.commit()
     
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
+    # Create access and refresh tokens
+    token_data = {"sub": str(user.user_id), "email": user.email}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
     
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "user_id": str(user.user_id),
@@ -232,6 +252,57 @@ async def get_current_user(
         "last_name": user.last_name,
         "role": user.role
     }
+
+
+@router.post("/refresh")
+async def refresh_token(request: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
+    """Refresh access token using refresh token"""
+    
+    try:
+        # Verify refresh token
+        payload = jwt.decode(request.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Check if it's a refresh token
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if user_id is None or email is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        
+        # Verify user still exists
+        result = await db.execute(
+            select(User).where(User.user_id == uuid.UUID(user_id))
+        )
+        user = result.scalar_one_or_none()
+        
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Create new access token
+        token_data = {"sub": user_id, "email": email}
+        new_access_token = create_access_token(data=token_data)
+        
+        return {
+            "access_token": new_access_token,
+            "token_type": "bearer"
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
 
 
 @router.post("/forgot-password")

@@ -82,21 +82,21 @@ api.interceptors.response.use(
         if (!refreshToken) throw new Error("No refresh token");
 
         const response = await axios.post(`${getBaseUrl()}/auth/refresh`, {
-          refreshToken,
+          refresh_token: refreshToken,
         });
 
-        const { accessToken } = response.data;
+        const { access_token } = response.data;
         
         if (Platform.OS === 'web') {
           if (typeof window !== 'undefined') {
-            localStorage.setItem("auth_token", accessToken);
+            localStorage.setItem("auth_token", access_token);
           }
         } else {
-          await SecureStore.setItemAsync("auth_token", accessToken);
+          await SecureStore.setItemAsync("auth_token", access_token);
         }
 
         // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - logout user

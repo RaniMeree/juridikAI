@@ -1,6 +1,52 @@
 # Chat Fix - Implementation Summary
 
-## Problem Identified
+## 🔴 CRITICAL FIX: Authentication Token Issues (Feb 2, 2026)
+
+### Problem
+Users were getting **401 Unauthorized** errors when trying to use the chat:
+- ❌ `GET /api/auth/me` returning 401 (Unauthorized)
+- ❌ `POST /api/conversations` returning 401 (Unauthorized)  
+- ❌ Error: "No refresh token" - preventing all API calls
+- ❌ App kept users "logged in" with invalid/expired tokens
+
+**Root Cause**: The backend was NOT returning refresh tokens, but the frontend expected them for token renewal. When access tokens expired after 30 minutes, users couldn't refresh their session and all API calls failed.
+
+### Solution Implemented
+
+#### Backend Changes (`backend/routes/auth.py`)
+1. ✅ Added `REFRESH_TOKEN_EXPIRE_DAYS = 30` setting
+2. ✅ Created `create_refresh_token()` function
+3. ✅ Updated login/signup to return **both** `access_token` and `refresh_token`
+4. ✅ Added new `/auth/refresh` endpoint to renew access tokens
+5. ✅ Updated `TokenResponse` model to include `refresh_token`
+
+#### Frontend Changes
+1. ✅ **`authStore.ts`**: Updated login/signup to store refresh tokens
+2. ✅ **`authStore.ts`**: Fixed `checkAuth()` to properly log out users with invalid tokens (instead of keeping them falsely "logged in")
+3. ✅ **`api.ts`**: Fixed refresh token request format (`refresh_token` instead of `refreshToken`)
+4. ✅ **`api.ts`**: Fixed response handling (`access_token` instead of `accessToken`)
+
+### How Token Refresh Works Now
+1. User logs in → receives `access_token` (expires in 30 min) + `refresh_token` (expires in 30 days)
+2. Both tokens stored securely (SecureStore on mobile, localStorage on web)
+3. When API returns 401:
+   - Interceptor automatically calls `/auth/refresh` with refresh token
+   - Gets new access token
+   - Retries the original request
+4. If refresh fails → user is logged out and redirected to login
+
+### Testing the Fix
+1. **Clear your browser cache/localStorage** or use incognito mode
+2. Log in or sign up
+3. Check that both tokens are stored (inspect localStorage or SecureStore)
+4. Try sending a chat message - should work now!
+5. Wait 30+ minutes, try again - token should auto-refresh
+
+---
+
+## Original Problem: Missing Chat Endpoints
+
+### Problem Identified
 The chat feature was not working because the backend API endpoints for conversations and messages were **completely missing**. 
 
 The frontend was trying to call:
