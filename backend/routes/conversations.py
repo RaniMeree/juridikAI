@@ -11,9 +11,14 @@ from pydantic import BaseModel
 from datetime import datetime
 from jose import JWTError, jwt
 import uuid
+import os
 from typing import List, Optional
+from openai import OpenAI
 
 from database import get_db
+
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Models
 Base = declarative_base()
@@ -293,9 +298,62 @@ async def send_message(
     )
     db.add(user_message)
     
-    # TODO: Integrate with AI service (RAG, LangChain, OpenAI, etc.)
-    # For now, return a simple echo response
-    assistant_content = f"Thank you for your message. I received: '{request.content}'. The AI integration is pending."
+    # Generate AI response using OpenAI
+    try:
+        # Get conversation history for context
+        history_result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == uuid.UUID(conversation_id))
+            .order_by(Message.created_at)
+            .limit(10)  # Last 10 messages for context
+        )
+        history_messages = history_result.scalars().all()
+        
+        # Build conversation context
+        messages_for_ai = [
+            {
+                "role": "system",
+                "content": (
+                    "You are Anna, a knowledgeable Swedish legal AI assistant. "
+                    "You help users understand Swedish law and legal matters. "
+                    "Provide clear, accurate, and helpful legal information. "
+                    "Always remind users to consult a qualified lawyer for specific legal advice. "
+                    "Respond in the same language the user uses (Swedish or English)."
+                )
+            }
+        ]
+        
+        # Add conversation history
+        for msg in history_messages:
+            messages_for_ai.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+        
+        # Add current user message
+        messages_for_ai.append({
+            "role": "user",
+            "content": request.content
+        })
+        
+        # Call OpenAI API
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",  # Using mini for cost efficiency, change to "gpt-4" for better quality
+            messages=messages_for_ai,
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        assistant_content = response.choices[0].message.content
+        tokens_used = response.usage.total_tokens if response.usage else 0
+        
+    except Exception as e:
+        print(f"OpenAI API Error: {e}")
+        assistant_content = (
+            "I apologize, but I'm having trouble processing your request right now. "
+            "Please try again in a moment."
+        )
+        tokens_used = 0
     
     # Save assistant message
     assistant_message = Message(
@@ -304,6 +362,7 @@ async def send_message(
         role="assistant",
         content=assistant_content,
         sources=[],
+        tokens_used=tokens_used,
         created_at=datetime.utcnow()
     )
     db.add(assistant_message)

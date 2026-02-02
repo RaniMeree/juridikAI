@@ -26,6 +26,10 @@
     "plugins": ["expo-router", "expo-localization", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "isDev": true,
+      "apiUrl": "http://localhost:8000/api"
     }
   }
 }
