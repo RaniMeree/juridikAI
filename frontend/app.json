@@ -28,8 +28,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "isDev": true,
-      "apiUrl": "http://localhost:8000/api"
+      "isDev": false,
+      "apiUrl": "https://juridikai-1.onrender.com/api"
     }
   }
 }
