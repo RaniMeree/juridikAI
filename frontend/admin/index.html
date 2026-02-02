@@ -17,7 +17,10 @@
         const { useState, useEffect } = React;
         
         // Configuration
-        const API_BASE_URL = 'http://localhost:8000/api';
+        // Auto-detect API URL based on environment
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000/api'
+            : 'https://juridikai.onrender.com/api';
         
         // API Service
         const api = {
