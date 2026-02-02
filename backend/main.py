@@ -31,7 +31,9 @@ app.add_middleware(
         "http://localhost:8081", 
         "http://localhost:8082",
         "http://localhost:3000",  # Admin panel
+        "http://localhost:8000",  # Local backend
         "https://juridikai.onrender.com",  # Production frontend
+        "https://juridikai-1.onrender.com",  # Production backend
         "http://localhost:19006",  # Expo web
         "*"  # Allow all for now - restrict later
     ],

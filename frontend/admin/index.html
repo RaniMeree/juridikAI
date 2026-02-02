@@ -17,10 +17,10 @@
         const { useState, useEffect } = React;
         
         // Configuration
-        // Auto-detect API URL based on environment
+        // Auto-detect API URL - use same domain as admin panel
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000/api'
-            : 'https://juridikai-1.onrender.com/api';
+            : window.location.origin + '/api';
         
         // API Service
         const api = {
