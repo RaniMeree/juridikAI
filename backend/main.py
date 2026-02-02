@@ -9,6 +9,7 @@ from sqlalchemy import text
 from dotenv import load_dotenv
 from database import get_db, test_connection, close_db
 from routes.auth import router as auth_router
+from routes.conversations import router as conversations_router
 
 # Load environment variables
 load_dotenv()
@@ -32,6 +33,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router, prefix="/api")
+app.include_router(conversations_router, prefix="/api")
 
 
 @app.on_event("startup")
