@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from database import get_db, test_connection, close_db
 from routes.auth import router as auth_router
 from routes.conversations import router as conversations_router
+from routes.admin import router as admin_router
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +23,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8081", 
         "http://localhost:8082",
+        "http://localhost:3000",  # Admin panel
         "https://juridikai.onrender.com",  # Production frontend
         "http://localhost:19006",  # Expo web
         "*"  # Allow all for now - restrict later
@@ -34,6 +36,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(conversations_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 
 
 @app.on_event("startup")

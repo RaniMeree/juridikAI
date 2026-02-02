@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anna Legal AI - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // API Service
+        const api = {
+            async request(endpoint, options = {}) {
+                const token = localStorage.getItem('adminToken');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('adminToken');
+                        localStorage.removeItem('adminUser');
+                        window.location.reload();
+                    }
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Request failed');
+                }
+                
+                return response.json();
+            },
+            
+            async login(email, password) {
+                const data = await this.request('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                localStorage.setItem('adminToken', data.access_token);
+                localStorage.setItem('adminUser', JSON.stringify(data.user));
+                return data;
+            },
+            
+            async getDashboard() {
+                return this.request('/admin/dashboard');
+            },
+            
+            async getUsers(page = 1, limit = 50, search = '', status = '') {
+                const params = new URLSearchParams({ page, limit });
+                if (search) params.append('search', search);
+                if (status) params.append('status', status);
+                return this.request(`/admin/users?${params}`);
+            },
+            
+            async getUserDetails(userId) {
+                return this.request(`/admin/users/${userId}`);
+            },
+            
+            async updateUserStatus(userId, status) {
+                return this.request(`/admin/users/${userId}/status?status=${status}`, {
+                    method: 'PATCH'
+                });
+            },
+            
+            async getConversations(page = 1, limit = 50, userId = '') {
+                const params = new URLSearchParams({ page, limit });
+                if (userId) params.append('user_id', userId);
+                return this.request(`/admin/conversations?${params}`);
+            },
+            
+            async getConversationMessages(conversationId) {
+                return this.request(`/admin/conversations/${conversationId}/messages`);
+            },
+            
+            async getSubscriptions(page = 1, limit = 50, status = '') {
+                const params = new URLSearchParams({ page, limit });
+                if (status) params.append('status_filter', status);
+                return this.request(`/admin/subscriptions?${params}`);
+            },
+            
+            async getPayments(page = 1, limit = 50) {
+                const params = new URLSearchParams({ page, limit });
+                return this.request(`/admin/payments?${params}`);
+            },
+            
+            async getAnalytics(days = 30) {
+                return this.request(`/admin/analytics/usage?days=${days}`);
+            },
+            
+            async getLogs(page = 1, limit = 50) {
+                const params = new URLSearchParams({ page, limit });
+                return this.request(`/admin/logs?${params}`);
+            }
+        };
+        
+        // Login Component
+        function Login({ onLogin }) {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                
+                try {
+                    const data = await api.login(email, password);
+                    if (data.user.role !== 'admin') {
+                        setError('Admin access required');
+                        localStorage.removeItem('adminToken');
+                        localStorage.removeItem('adminUser');
+                        return;
+                    }
+                    onLogin(data.user);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                    <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                        <div className="text-center mb-8">
+                            <h1 className="text-3xl font-bold text-gray-800">Anna Legal AI</h1>
+                            <p className="text-gray-600 mt-2">Admin Panel</p>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            
+                            <div className="mb-6">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                                    {error}
+                                </div>
+                            )}
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                            >
+                                {loading ? 'Logging in...' : 'Login'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Dashboard Component
+        function Dashboard() {
+            const [stats, setStats] = useState(null);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                loadDashboard();
+            }, []);
+            
+            const loadDashboard = async () => {
+                try {
+                    const data = await api.getDashboard();
+                    setStats(data);
+                } catch (err) {
+                    console.error('Failed to load dashboard:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            if (loading) {
+                return (
+                    <div className="flex justify-center items-center h-64">
+                        <div className="text-gray-600">Loading...</div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h2>
+                    
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <div className="text-gray-500 text-sm font-semibold">Total Users</div>
+                            <div className="text-3xl font-bold text-blue-600 mt-2">{stats?.totalUsers || 0}</div>
+                            <div className="text-green-500 text-sm mt-2">+{stats?.newUsers || 0} this month</div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <div className="text-gray-500 text-sm font-semibold">Total Conversations</div>
+                            <div className="text-3xl font-bold text-purple-600 mt-2">{stats?.totalConversations || 0}</div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <div className="text-gray-500 text-sm font-semibold">Total Messages</div>
+                            <div className="text-3xl font-bold text-green-600 mt-2">{stats?.totalMessages || 0}</div>
+                            <div className="text-gray-500 text-sm mt-2">Avg: {stats?.averageMessagesPerUser || 0} per user</div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <div className="text-gray-500 text-sm font-semibold">Active Subscriptions</div>
+                            <div className="text-3xl font-bold text-orange-600 mt-2">{stats?.activeSubscriptions || 0}</div>
+                            <div className="text-gray-500 text-sm mt-2">Revenue: {stats?.totalRevenue?.toFixed(2) || 0} SEK</div>
+                        </div>
+                    </div>
+                    
+                    {/* User Growth Chart */}
+                    <div className="bg-white p-6 rounded-lg shadow">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">User Growth (Last 7 Days)</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b">
+                                        <th className="text-left py-2">Date</th>
+                                        <th className="text-right py-2">New Users</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats?.userGrowth?.map((day, index) => (
+                                        <tr key={index} className="border-b">
+                                            <td className="py-2">{day.date}</td>
+                                            <td className="text-right py-2 font-semibold">{day.count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Users Component
+        function Users() {
+            const [users, setUsers] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [page, setPage] = useState(1);
+            const [pagination, setPagination] = useState(null);
+            const [search, setSearch] = useState('');
+            const [statusFilter, setStatusFilter] = useState('');
+            const [selectedUser, setSelectedUser] = useState(null);
+            
+            useEffect(() => {
+                loadUsers();
+            }, [page, statusFilter]);
+            
+            const loadUsers = async () => {
+                setLoading(true);
+                try {
+                    const data = await api.getUsers(page, 50, search, statusFilter);
+                    setUsers(data.users);
+                    setPagination(data.pagination);
+                } catch (err) {
+                    console.error('Failed to load users:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const handleSearch = () => {
+                setPage(1);
+                loadUsers();
+            };
+            
+            const viewUserDetails = async (userId) => {
+                try {
+                    const data = await api.getUserDetails(userId);
+                    setSelectedUser(data);
+                } catch (err) {
+                    console.error('Failed to load user details:', err);
+                }
+            };
+            
+            const handleUpdateStatus = async (userId, status) => {
+                try {
+                    await api.updateUserStatus(userId, status);
+                    alert('User status updated');
+                    loadUsers();
+                    if (selectedUser && selectedUser.userId === userId) {
+                        viewUserDetails(userId);
+                    }
+                } catch (err) {
+                    alert('Failed to update user status: ' + err.message);
+                }
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Users Management</h2>
+                    
+                    {/* Filters */}
+                    <div className="bg-white p-4 rounded-lg shadow mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Search by email, name..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                                <button
+                                    onClick={handleSearch}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                                >
+                                    Search
+                                </button>
+                            </div>
+                            
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-lg"
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="suspended">Suspended</option>
+                                <option value="deleted">Deleted</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    {/* Users Table */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Messages</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Joined</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="6" className="text-center py-8 text-gray-500">Loading...</td>
+                                        </tr>
+                                    ) : users.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="text-center py-8 text-gray-500">No users found</td>
+                                        </tr>
+                                    ) : (
+                                        users.map((user) => (
+                                            <tr key={user.userId} className="border-t hover:bg-gray-50">
+                                                <td className="py-3 px-4">{user.email}</td>
+                                                <td className="py-3 px-4">{user.firstName} {user.lastName}</td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                        user.accountStatus === 'active' ? 'bg-green-100 text-green-800' :
+                                                        user.accountStatus === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {user.accountStatus}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">{user.messageCount}</td>
+                                                <td className="py-3 px-4">{new Date(user.createdAt).toLocaleDateString()}</td>
+                                                <td className="py-3 px-4">
+                                                    <button
+                                                        onClick={() => viewUserDetails(user.userId)}
+                                                        className="text-blue-600 hover:text-blue-800 font-semibold"
+                                                    >
+                                                        View
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {/* Pagination */}
+                        {pagination && (
+                            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
+                                <div className="text-sm text-gray-700">
+                                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page === 1}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page >= pagination.totalPages}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* User Details Modal */}
+                    {selectedUser && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <h3 className="text-2xl font-bold text-gray-800">User Details</h3>
+                                        <button
+                                            onClick={() => setSelectedUser(null)}
+                                            className="text-gray-500 hover:text-gray-700 text-2xl"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-700">Basic Information</h4>
+                                            <div className="mt-2 space-y-2">
+                                                <p><strong>Email:</strong> {selectedUser.email}</p>
+                                                <p><strong>Name:</strong> {selectedUser.firstName} {selectedUser.lastName}</p>
+                                                <p><strong>Phone:</strong> {selectedUser.phone || 'N/A'}</p>
+                                                <p><strong>Role:</strong> {selectedUser.role}</p>
+                                                <p><strong>Status:</strong> 
+                                                    <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
+                                                        selectedUser.accountStatus === 'active' ? 'bg-green-100 text-green-800' :
+                                                        selectedUser.accountStatus === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
+                                                        'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {selectedUser.accountStatus}
+                                                    </span>
+                                                </p>
+                                                <p><strong>Joined:</strong> {new Date(selectedUser.createdAt).toLocaleString()}</p>
+                                                <p><strong>Last Login:</strong> {selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleString() : 'Never'}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <h4 className="font-semibold text-gray-700">Usage Statistics</h4>
+                                            <div className="mt-2 space-y-2">
+                                                <p><strong>Conversations:</strong> {selectedUser.conversationCount}</p>
+                                                <p><strong>Messages:</strong> {selectedUser.messageCount}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        {selectedUser.subscriptions && selectedUser.subscriptions.length > 0 && (
+                                            <div>
+                                                <h4 className="font-semibold text-gray-700">Subscription</h4>
+                                                <div className="mt-2 space-y-2">
+                                                    {selectedUser.subscriptions.map((sub, idx) => (
+                                                        <div key={idx} className="border p-3 rounded">
+                                                            <p><strong>Plan:</strong> {sub.planType}</p>
+                                                            <p><strong>Status:</strong> {sub.status}</p>
+                                                            <p><strong>Queries:</strong> {sub.queriesUsed} / {sub.queryLimit}</p>
+                                                            {sub.currentPeriodEnd && (
+                                                                <p><strong>Period End:</strong> {new Date(sub.currentPeriodEnd).toLocaleDateString()}</p>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {selectedUser.recentPayments && selectedUser.recentPayments.length > 0 && (
+                                            <div>
+                                                <h4 className="font-semibold text-gray-700">Recent Payments</h4>
+                                                <div className="mt-2 space-y-2">
+                                                    {selectedUser.recentPayments.map((payment, idx) => (
+                                                        <div key={idx} className="border p-2 rounded text-sm">
+                                                            <p><strong>Amount:</strong> {payment.amount} {payment.currency}</p>
+                                                            <p><strong>Status:</strong> {payment.status}</p>
+                                                            <p><strong>Date:</strong> {new Date(payment.createdAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="pt-4 border-t">
+                                            <h4 className="font-semibold text-gray-700 mb-3">Actions</h4>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleUpdateStatus(selectedUser.userId, 'active')}
+                                                    disabled={selectedUser.accountStatus === 'active'}
+                                                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                                >
+                                                    Activate
+                                                </button>
+                                                <button
+                                                    onClick={() => handleUpdateStatus(selectedUser.userId, 'suspended')}
+                                                    disabled={selectedUser.accountStatus === 'suspended'}
+                                                    className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50"
+                                                >
+                                                    Suspend
+                                                </button>
+                                                <button
+                                                    onClick={() => handleUpdateStatus(selectedUser.userId, 'deleted')}
+                                                    disabled={selectedUser.accountStatus === 'deleted'}
+                                                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        // Conversations Component
+        function Conversations() {
+            const [conversations, setConversations] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [page, setPage] = useState(1);
+            const [pagination, setPagination] = useState(null);
+            const [selectedConversation, setSelectedConversation] = useState(null);
+            const [messages, setMessages] = useState([]);
+            
+            useEffect(() => {
+                loadConversations();
+            }, [page]);
+            
+            const loadConversations = async () => {
+                setLoading(true);
+                try {
+                    const data = await api.getConversations(page, 50);
+                    setConversations(data.conversations);
+                    setPagination(data.pagination);
+                } catch (err) {
+                    console.error('Failed to load conversations:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const viewMessages = async (conversationId) => {
+                try {
+                    const data = await api.getConversationMessages(conversationId);
+                    setMessages(data.messages);
+                    setSelectedConversation(conversationId);
+                } catch (err) {
+                    console.error('Failed to load messages:', err);
+                }
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Conversations</h2>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Title</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Messages</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Message</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">Loading...</td>
+                                        </tr>
+                                    ) : conversations.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">No conversations found</td>
+                                        </tr>
+                                    ) : (
+                                        conversations.map((conv) => (
+                                            <tr key={conv.conversationId} className="border-t hover:bg-gray-50">
+                                                <td className="py-3 px-4">{conv.title}</td>
+                                                <td className="py-3 px-4">{conv.user.email}</td>
+                                                <td className="py-3 px-4">{conv.messageCount}</td>
+                                                <td className="py-3 px-4">
+                                                    {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleString() : 'N/A'}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <button
+                                                        onClick={() => viewMessages(conv.conversationId)}
+                                                        className="text-blue-600 hover:text-blue-800 font-semibold"
+                                                    >
+                                                        View Messages
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {pagination && (
+                            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
+                                <div className="text-sm text-gray-700">
+                                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page === 1}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page >= pagination.totalPages}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Messages Modal */}
+                    {selectedConversation && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <h3 className="text-2xl font-bold text-gray-800">Conversation Messages</h3>
+                                        <button
+                                            onClick={() => setSelectedConversation(null)}
+                                            className="text-gray-500 hover:text-gray-700 text-2xl"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        {messages.map((msg) => (
+                                            <div
+                                                key={msg.messageId}
+                                                className={`p-4 rounded-lg ${
+                                                    msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="font-semibold text-sm">
+                                                        {msg.role === 'user' ? 'User' : 'Assistant'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {new Date(msg.createdAt).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                                                {msg.tokensUsed > 0 && (
+                                                    <div className="mt-2 text-xs text-gray-500">
+                                                        Tokens: {msg.tokensUsed}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        // Subscriptions Component
+        function Subscriptions() {
+            const [subscriptions, setSubscriptions] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [page, setPage] = useState(1);
+            const [pagination, setPagination] = useState(null);
+            const [statusFilter, setStatusFilter] = useState('');
+            
+            useEffect(() => {
+                loadSubscriptions();
+            }, [page, statusFilter]);
+            
+            const loadSubscriptions = async () => {
+                setLoading(true);
+                try {
+                    const data = await api.getSubscriptions(page, 50, statusFilter);
+                    setSubscriptions(data.subscriptions);
+                    setPagination(data.pagination);
+                } catch (err) {
+                    console.error('Failed to load subscriptions:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Subscriptions</h2>
+                    
+                    {/* Filter */}
+                    <div className="bg-white p-4 rounded-lg shadow mb-6">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg"
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="expired">Expired</option>
+                            <option value="past_due">Past Due</option>
+                        </select>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Plan</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Usage</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Period End</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">Loading...</td>
+                                        </tr>
+                                    ) : subscriptions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">No subscriptions found</td>
+                                        </tr>
+                                    ) : (
+                                        subscriptions.map((sub) => (
+                                            <tr key={sub.subscriptionId} className="border-t hover:bg-gray-50">
+                                                <td className="py-3 px-4">{sub.user.email}</td>
+                                                <td className="py-3 px-4 capitalize">{sub.planType}</td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                        sub.status === 'active' ? 'bg-green-100 text-green-800' :
+                                                        sub.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                        'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                        {sub.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    {sub.queriesUsed} / {sub.queryLimit}
+                                                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
+                                                        <div
+                                                            className="bg-blue-600 h-2 rounded-full"
+                                                            style={{ width: `${(sub.queriesUsed / sub.queryLimit) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    {sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : 'N/A'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {pagination && (
+                            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
+                                <div className="text-sm text-gray-700">
+                                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page === 1}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page >= pagination.totalPages}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Payments Component (simplified version)
+        function Payments() {
+            const [payments, setPayments] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [page, setPage] = useState(1);
+            const [pagination, setPagination] = useState(null);
+            
+            useEffect(() => {
+                loadPayments();
+            }, [page]);
+            
+            const loadPayments = async () => {
+                setLoading(true);
+                try {
+                    const data = await api.getPayments(page, 50);
+                    setPayments(data.payments);
+                    setPagination(data.pagination);
+                } catch (err) {
+                    console.error('Failed to load payments:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Payment History</h2>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Amount</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Method</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">Loading...</td>
+                                        </tr>
+                                    ) : payments.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-8 text-gray-500">No payments found</td>
+                                        </tr>
+                                    ) : (
+                                        payments.map((payment) => (
+                                            <tr key={payment.paymentId} className="border-t hover:bg-gray-50">
+                                                <td className="py-3 px-4">{payment.user.email}</td>
+                                                <td className="py-3 px-4 font-semibold">
+                                                    {payment.amount.toFixed(2)} {payment.currency}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                        payment.status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                                                        payment.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                                        'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                        {payment.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">{payment.paymentMethod || 'N/A'}</td>
+                                                <td className="py-3 px-4">
+                                                    {new Date(payment.createdAt).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {pagination && (
+                            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
+                                <div className="text-sm text-gray-700">
+                                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPage(page - 1)}
+                                        disabled={page === 1}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(page + 1)}
+                                        disabled={page >= pagination.totalPages}
+                                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Main App Component
+        function App() {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [currentUser, setCurrentUser] = useState(null);
+            const [currentPage, setCurrentPage] = useState('dashboard');
+            
+            useEffect(() => {
+                // Check if user is already logged in
+                const token = localStorage.getItem('adminToken');
+                const user = localStorage.getItem('adminUser');
+                if (token && user) {
+                    try {
+                        const userData = JSON.parse(user);
+                        if (userData.role === 'admin') {
+                            setCurrentUser(userData);
+                            setIsAuthenticated(true);
+                        }
+                    } catch (err) {
+                        localStorage.removeItem('adminToken');
+                        localStorage.removeItem('adminUser');
+                    }
+                }
+            }, []);
+            
+            const handleLogin = (user) => {
+                setCurrentUser(user);
+                setIsAuthenticated(true);
+            };
+            
+            const handleLogout = () => {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminUser');
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+            };
+            
+            if (!isAuthenticated) {
+                return <Login onLogin={handleLogin} />;
+            }
+            
+            return (
+                <div className="min-h-screen flex">
+                    {/* Sidebar */}
+                    <div className="w-64 bg-gray-800 text-white p-6">
+                        <div className="mb-8">
+                            <h1 className="text-2xl font-bold">Anna Legal AI</h1>
+                            <p className="text-gray-400 text-sm mt-1">Admin Panel</p>
+                        </div>
+                        
+                        <nav className="space-y-2">
+                            <button
+                                onClick={() => setCurrentPage('dashboard')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'dashboard' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                Dashboard
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage('users')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'users' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                Users
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage('conversations')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'conversations' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                Conversations
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage('subscriptions')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'subscriptions' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                Subscriptions
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage('payments')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'payments' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                Payments
+                            </button>
+                        </nav>
+                        
+                        <div className="mt-auto pt-8">
+                            <div className="border-t border-gray-700 pt-4">
+                                <p className="text-sm text-gray-400 mb-2">{currentUser?.email}</p>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Main Content */}
+                    <div className="flex-1 p-8 overflow-y-auto">
+                        {currentPage === 'dashboard' && <Dashboard />}
+                        {currentPage === 'users' && <Users />}
+                        {currentPage === 'conversations' && <Conversations />}
+                        {currentPage === 'subscriptions' && <Subscriptions />}
+                        {currentPage === 'payments' && <Payments />}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
