@@ -26,13 +26,43 @@ export default function LoginScreen() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [localError, setLocalError] = useState("");
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleLogin = async () => {
+    setLocalError("");
+
+    if (!email.trim()) {
+      setLocalError("Email is required");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setLocalError("Please enter a valid email address");
+      return;
+    }
+
+    if (!password) {
+      setLocalError("Password is required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters");
+      return;
+    }
+
     const success = await login(email, password);
     if (success) {
       router.replace("/(tabs)");
     }
   };
+
+  const displayError = localError || error;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,9 +87,9 @@ export default function LoginScreen() {
             </View>
 
             {/* Error Message */}
-            {error && (
+            {displayError && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{displayError}</Text>
               </View>
             )}
 

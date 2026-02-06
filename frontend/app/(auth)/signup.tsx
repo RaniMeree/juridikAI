@@ -31,16 +31,58 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSignup = async () => {
     setLocalError("");
 
-    // Validation
-    if (password !== confirmPassword) {
-      setLocalError(t("auth.errors.passwordsDoNotMatch"));
+    // Required fields
+    if (!firstName.trim()) {
+      setLocalError("First name is required");
+      return;
+    }
+    if (!lastName.trim()) {
+      setLocalError("Last name is required");
+      return;
+    }
+    if (!email.trim()) {
+      setLocalError("Email is required");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setLocalError("Please enter a valid email address");
+      return;
+    }
+    if (!password) {
+      setLocalError("Password is required");
       return;
     }
     if (password.length < 8) {
-      setLocalError(t("auth.errors.passwordMinLength"));
+      setLocalError("Password must be at least 8 characters");
+      return;
+    }
+    // Password requirements
+    if (!/[A-Z]/.test(password)) {
+      setLocalError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setLocalError("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setLocalError("Password must contain at least one number");
+      return;
+    }
+    if (!confirmPassword) {
+      setLocalError("Please confirm your password");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLocalError("Passwords do not match");
       return;
     }
 
