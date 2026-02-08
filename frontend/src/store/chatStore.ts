@@ -166,7 +166,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
       }
       
-      const response = await api.post(`/conversations/${conversationId}/messages`, formData);
+      // Send FormData - let axios set the proper Content-Type with boundary
+      const response = await api.post(
+        `/conversations/${conversationId}/messages`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
       const { userMessage: savedUserMessage, assistantMessage } = response.data;
 

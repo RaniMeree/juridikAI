@@ -413,20 +413,21 @@ async def send_message(
     conversation_id: str,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-    content: str = Form(None),
-    files: List[UploadFile] = File(default=None)
+    content: str = Form(...),
+    files: List[UploadFile] = File(default=[])
 ):
     """Send a message and get AI response (with optional file attachments)"""
     
     print(f"\n=== MESSAGE REQUEST START ===")
     print(f"Conversation ID: {conversation_id}")
     print(f"User ID: {user_id}")
-    print(f"Content: {content}")
+    print(f"Content: {repr(content)}")
+    print(f"Content length: {len(content) if content else 0}")
     print(f"Files received: {files}")
-    print(f"Files count: {len(files) if files else 0}")
+    print(f"Files count: {len(files)}")
     
-    if not content:
-        print("ERROR: No content provided")
+    if not content or not content.strip():
+        print("ERROR: No content provided or empty content")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Content is required"
@@ -451,7 +452,7 @@ async def send_message(
     print(f"Conversation found: {conversation.title}")
     
     # Handle files if provided
-    files_to_process = files if files and files[0].filename else []
+    files_to_process = [f for f in files if f.filename]
     print(f"Files to process: {len(files_to_process)}")
     
     # Process uploaded files if any
