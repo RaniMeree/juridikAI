@@ -14,8 +14,7 @@ from typing import Optional
 
 from database import get_db
 from routes.auth import User
-from routes.conversations import Conversation, Message, UserFile
-from r2_storage import r2_storage
+from routes.conversations import Conversation, Message
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -923,66 +922,23 @@ async def get_file_stats(
     }
 
 
-@router.get('/files/{file_id}/download-url')
-async def get_file_download_url(
-    file_id: str,
-    admin: User = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Generate a pre-signed download URL for a file"""
-    
-    # Get file info from database
-    result = await db.execute(
-        select(UserFile).where(UserFile.file_id == uuid.UUID(file_id))
-    )
-    user_file = result.scalar_one_or_none()
-    
-    if not user_file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
-    
-    # Generate pre-signed URL (valid for 1 hour)
-    download_url = r2_storage.get_download_url(user_file.r2_key, expires_in=3600)
-    
-    return {
-        'fileId': str(user_file.file_id),
-        'filename': user_file.filename,
-        'downloadUrl': download_url,
-        'expiresIn': 3600
-    }
+# Note: File download/delete endpoints disabled - using Firebase Storage instead
+# Uncomment and adapt if you need admin file management features
 
+# @router.get('/files/{file_id}/download-url')
+# async def get_file_download_url(
+#     file_id: str,
+#     admin: User = Depends(get_current_admin),
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """Generate a pre-signed download URL for a file"""
+#     pass
 
-@router.delete('/files/{file_id}')
-async def delete_file(
-    file_id: str,
-    admin: User = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Delete a file from R2 storage and mark as deleted in database"""
-    
-    # Get file info from database
-    result = await db.execute(
-        select(UserFile).where(UserFile.file_id == uuid.UUID(file_id))
-    )
-    user_file = result.scalar_one_or_none()
-    
-    if not user_file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
-    
-    # Delete from R2
-    deleted = r2_storage.delete_file(user_file.r2_key)
-    
-    # Mark as deleted in database
-    user_file.status = 'deleted'
-    await db.commit()
-    
-    return {
-        'success': True,
-        'fileId': str(user_file.file_id),
-        'deletedFromStorage': deleted
-    }
+# @router.delete('/files/{file_id}')
+# async def delete_file(
+#     file_id: str,
+#     admin: User = Depends(get_current_admin),
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """Delete a file from storage"""
+#     pass
