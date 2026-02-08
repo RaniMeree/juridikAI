@@ -1,6 +1,7 @@
-import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect } from "react";
+import * as DocumentPicker from 'expo-document-picker';
 import { useTranslation } from "@/hooks/useTranslation";
 import { useChatStore, Message } from "@/store/chatStore";
 import ChatBubble from "@/components/ChatBubble";
@@ -23,14 +24,62 @@ export default function ChatScreen() {
   const { t } = useTranslation();
   const { messages, sendMessage, isLoading, currentConversation } = useChatStore();
   const [inputText, setInputText] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
   const handleSend = async () => {
-    if (!inputText.trim() || isLoading) return;
+    if ((!inputText.trim() && selectedFiles.length === 0) || isLoading) return;
     
-    const text = inputText.trim();
+    const text = inputText.trim() || "Analyze this document";
     setInputText("");
-    await sendMessage(text);
+    const files = selectedFiles;
+    setSelectedFiles([]);
+    
+    await sendMessage(text, files);
+  };
+
+  const handleFilePicker = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+        copyToCacheDirectory: true,
+        multiple: true,
+      });
+
+      if (result.canceled === false && result.assets) {
+        // Check file sizes
+        const validFiles: File[] = [];
+        for (const asset of result.assets) {
+          if (asset.size && asset.size > 10 * 1024 * 1024) {
+            Alert.alert("File Too Large", `${asset.name} exceeds 10MB limit`);
+            continue;
+          }
+
+          // For web, create File object
+          if (Platform.OS === 'web' && asset.file) {
+            validFiles.push(asset.file as File);
+          } else {
+            // For native, we need to handle differently
+            // Create a blob from the URI
+            const response = await fetch(asset.uri);
+            const blob = await response.blob();
+            const file = new File([blob], asset.name, { type: asset.mimeType || 'application/octet-stream' });
+            validFiles.push(file);
+          }
+        }
+
+        if (validFiles.length > 0) {
+          setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert("Error", "Failed to pick document");
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Scroll to bottom when new message arrives
@@ -89,11 +138,28 @@ export default function ChatScreen() {
 
         {/* Input Area */}
         <View style={styles.inputContainer}>
+          {/* Selected Files */}
+          {selectedFiles.length > 0 && (
+            <View style={styles.selectedFilesContainer}>
+              {selectedFiles.map((file, index) => (
+                <View key={index} style={styles.fileChip}>
+                  <Text style={styles.fileChipText} numberOfLines={1}>
+                    📎 {file.name}
+                  </Text>
+                  <Pressable onPress={() => removeFile(index)} style={styles.fileRemoveButton}>
+                    <Text style={styles.fileRemoveText}>✕</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.inputRow}>
             {/* File Upload Button */}
             <Pressable
               style={styles.attachButton}
-              onPress={() => {/* TODO: File picker */}}
+              onPress={handleFilePicker}
+              disabled={isLoading}
             >
               <Text style={styles.buttonEmoji}>📎</Text>
             </Pressable>
@@ -115,10 +181,10 @@ export default function ChatScreen() {
             <Pressable
               style={[
                 styles.sendButton,
-                inputText.trim() && !isLoading ? styles.sendButtonActive : styles.sendButtonInactive
+                (inputText.trim() || selectedFiles.length > 0) && !isLoading ? styles.sendButtonActive : styles.sendButtonInactive
               ]}
               onPress={handleSend}
-              disabled={!inputText.trim() || isLoading}
+              disabled={(!inputText.trim() && selectedFiles.length === 0) || isLoading}
             >
               <Text style={styles.buttonEmoji}>➤</Text>
             </Pressable>
@@ -216,6 +282,41 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 768,
     alignSelf: "center",
+  },
+  selectedFilesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  fileChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.primary600,
+    borderRadius: 16,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 6,
+    maxWidth: "90%",
+  },
+  fileChipText: {
+    color: colors.white,
+    fontSize: 13,
+    marginRight: 8,
+    flex: 1,
+  },
+  fileRemoveButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fileRemoveText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: "bold",
   },
   inputRow: {
     flexDirection: "row",

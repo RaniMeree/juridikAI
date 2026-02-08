@@ -9,6 +9,14 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachedDocuments?: Array<{
+    file_id: string;
+    filename: string;
+    file_type: string;
+    file_size: number;
+    word_count: number;
+    chunk_count: number;
+  }>;
   sources?: Array<{
     docId: string;
     title: string;
@@ -37,7 +45,7 @@ interface ChatState {
   selectConversation: (conversationId: string) => Promise<void>;
   createConversation: () => Promise<string | null>;
   deleteConversation: (conversationId: string) => Promise<void>;
-  sendMessage: (content: string, attachments?: string[]) => Promise<void>;
+  sendMessage: (content: string, files?: File[]) => Promise<void>;
   clearMessages: () => void;
 }
 
@@ -114,7 +122,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content: string, attachments?: string[]) => {
+  sendMessage: async (content: string, files?: File[]) => {
     const { currentConversation, createConversation } = get();
 
     // Create conversation if needed
@@ -125,11 +133,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       conversationId = newId;
     }
 
-    // Add user message immediately
+    // Add user message immediately (optimistic update)
     const userMessage: Message = {
       id: `temp-${Date.now()}`,
       role: "user",
       content,
+      attachedDocuments: files?.map(f => ({
+        file_id: `temp-${Date.now()}`,
+        filename: f.name,
+        file_type: f.type,
+        file_size: f.size,
+        word_count: 0,
+        chunk_count: 0,
+      })),
       createdAt: new Date().toISOString(),
     };
 
@@ -139,10 +155,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('content', content);
+      
+      // Add files if any
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          formData.append('files', file);
+        });
+      }
+
       // Send to API
-      const response = await api.post(`/conversations/${conversationId}/messages`, {
-        content,
-        attachments,
+      const response = await api.post(`/conversations/${conversationId}/messages`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       const { userMessage: savedUserMessage, assistantMessage } = response.data;

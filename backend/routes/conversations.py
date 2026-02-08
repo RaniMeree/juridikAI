@@ -2,7 +2,7 @@
 Conversation and Message routes for Juridik AI
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Column, String, Integer, DateTime, Text, func, desc
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -12,10 +12,12 @@ from datetime import datetime
 from jose import JWTError, jwt
 import uuid
 import os
+import json
 from typing import List, Optional
 from openai import OpenAI
 
 from database import get_db
+from file_processing import FileProcessor
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -257,6 +259,7 @@ async def get_messages(
             "id": str(msg.message_id),
             "role": msg.role,
             "content": msg.content,
+            "attachedDocuments": msg.attached_documents or [],
             "sources": msg.sources or [],
             "createdAt": msg.created_at.isoformat() if msg.created_at else None
         }
@@ -267,11 +270,12 @@ async def get_messages(
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
-    request: SendMessageRequest,
+    content: str = Form(...),
+    files: List[UploadFile] = File(None),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Send a message and get AI response"""
+    """Send a message and get AI response (with optional file attachments)"""
     
     # Verify conversation belongs to user
     conv_result = await db.execute(
@@ -287,13 +291,54 @@ async def send_message(
             detail="Conversation not found"
         )
     
+    # Process uploaded files if any
+    processed_files = []
+    extracted_texts = []
+    
+    if files:
+        for file in files:
+            try:
+                # Read file content
+                file_content = await file.read()
+                
+                # Process the file
+                file_data = FileProcessor.process_file(
+                    file_content=file_content,
+                    content_type=file.content_type,
+                    filename=file.filename
+                )
+                
+                # Store metadata (without the full extracted text to save space)
+                processed_files.append({
+                    "file_id": file_data["file_id"],
+                    "filename": file_data["filename"],
+                    "file_type": file_data["file_type"],
+                    "file_size": file_data["file_size"],
+                    "word_count": file_data["word_count"],
+                    "chunk_count": file_data["chunk_count"],
+                    "processed_at": file_data["processed_at"]
+                })
+                
+                # Keep extracted text for AI context
+                extracted_texts.append({
+                    "filename": file_data["filename"],
+                    "text": file_data["extracted_text"],
+                    "chunks": file_data["chunks"]
+                })
+                
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to process file '{file.filename}': {str(e)}"
+                )
+    
     # Save user message
     user_message = Message(
         message_id=uuid.uuid4(),
         conversation_id=uuid.UUID(conversation_id),
         role="user",
-        content=request.content,
-        attached_documents=request.attachments or [],
+        content=content,
+        attached_documents=processed_files if processed_files else [],
         created_at=datetime.utcnow()
     )
     db.add(user_message)
@@ -310,18 +355,22 @@ async def send_message(
         history_messages = history_result.scalars().all()
         
         # Build conversation context
-        messages_for_ai = [
-            {
-                "role": "system",
-                "content": (
-                    "You are Anna, a knowledgeable Swedish legal AI assistant. "
-                    "You help users understand Swedish law and legal matters. "
-                    "Provide clear, accurate, and helpful legal information. "
-                    "Always remind users to consult a qualified lawyer for specific legal advice. "
-                    "Respond in the same language the user uses (Swedish or English)."
-                )
-            }
-        ]
+        system_prompt = (
+            "You are Anna, a knowledgeable Swedish legal AI assistant. "
+            "You help users understand Swedish law and legal matters. "
+            "Provide clear, accurate, and helpful legal information. "
+            "Always remind users to consult a qualified lawyer for specific legal advice. "
+            "Respond in the same language the user uses (Swedish or English)."
+        )
+        
+        # If user uploaded documents, add instructions for document analysis
+        if extracted_texts:
+            system_prompt += (
+                "\n\nThe user has uploaded document(s). Analyze the documents carefully and answer questions based on their content. "
+                "Reference specific parts of the documents in your response when relevant."
+            )
+        
+        messages_for_ai = [{"role": "system", "content": system_prompt}]
         
         # Add conversation history
         for msg in history_messages:
@@ -330,18 +379,29 @@ async def send_message(
                 "content": msg.content
             })
         
-        # Add current user message
+        # Build current user message with document context
+        current_message = content
+        
+        # Add document content to the message
+        if extracted_texts:
+            current_message += "\n\n--- ATTACHED DOCUMENTS ---\n"
+            for doc in extracted_texts:
+                current_message += f"\n[File: {doc['filename']}]\n"
+                # Use chunking for better context
+                context = FileProcessor.create_context_for_ai(doc['chunks'], content)
+                current_message += context + "\n"
+        
         messages_for_ai.append({
             "role": "user",
-            "content": request.content
+            "content": current_message
         })
         
         # Call OpenAI API
         response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",  # Using mini for cost efficiency, change to "gpt-4" for better quality
+            model="gpt-4o-mini",  # Using mini for cost efficiency
             messages=messages_for_ai,
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=1500  # Increased for document analysis
         )
         
         assistant_content = response.choices[0].message.content
@@ -374,7 +434,9 @@ async def send_message(
     
     # Generate title from first message
     if conversation.message_count == 2:
-        title = request.content[:50] + ("..." if len(request.content) > 50 else "")
+        title = content[:50] + ("..." if len(content) > 50 else "")
+        if processed_files:
+            title = f"📎 {title}"  # Add file indicator
         conversation.title = title
     
     await db.commit()
@@ -386,6 +448,7 @@ async def send_message(
             "id": str(user_message.message_id),
             "role": "user",
             "content": user_message.content,
+            "attachedDocuments": processed_files,
             "createdAt": user_message.created_at.isoformat()
         },
         "assistantMessage": {

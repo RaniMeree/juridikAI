@@ -26,6 +26,22 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           isUser ? styles.userBubble : styles.assistantBubble,
         ]}
       >
+        {/* Show attached documents */}
+        {message.attachedDocuments && message.attachedDocuments.length > 0 && (
+          <View style={styles.attachmentsContainer}>
+            {message.attachedDocuments.map((doc, index) => (
+              <View key={doc.file_id || index} style={styles.attachmentChip}>
+                <Text style={styles.attachmentText}>
+                  📎 {doc.filename}
+                </Text>
+                <Text style={styles.attachmentMeta}>
+                  {(doc.file_size / 1024).toFixed(1)} KB • {doc.word_count} words
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        
         <Text style={[styles.messageText, isUser ? styles.userText : styles.assistantText]}>
           {message.content}
         </Text>
@@ -98,5 +114,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     paddingHorizontal: 8,
+  },
+  attachmentsContainer: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  attachmentChip: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    padding: 8,
+  },
+  attachmentText: {
+    color: colors.white,
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  attachmentMeta: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
   },
 });
