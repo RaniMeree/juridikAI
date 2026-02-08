@@ -1,18 +1,18 @@
 """
-Cloudflare R2 Storage Utility
-Handles file uploads and downloads to/from R2
+Cloudflare R2 Storage Service for Anna Legal AI
+Handles file uploads, downloads, and management
 """
 
 import os
-import boto3
-from botocore.client import Config
-from botocore.exceptions import ClientError
-from datetime import datetime, timedelta
 import uuid
+import boto3
+from botocore.config import Config
+from datetime import datetime
 from typing import Optional, Dict
 
+
 class R2Storage:
-    """Cloudflare R2 storage client using S3-compatible API"""
+    """Cloudflare R2 storage client (S3-compatible)"""
     
     def __init__(self):
         self.account_id = os.getenv("R2_ACCOUNT_ID", "f68ad91187381e574b68e08dab1d20a3")
@@ -21,200 +21,172 @@ class R2Storage:
         self.bucket_name = os.getenv("R2_BUCKET_NAME", "anna-legal-files")
         self.endpoint_url = f"https://{self.account_id}.r2.cloudflarestorage.com"
         
-        # Initialize S3 client
-        self.s3_client = boto3.client(
+        # Initialize S3 client for R2
+        self.client = boto3.client(
             's3',
             endpoint_url=self.endpoint_url,
             aws_access_key_id=self.access_key_id,
             aws_secret_access_key=self.secret_access_key,
-            config=Config(signature_version='s3v4'),
+            config=Config(
+                signature_version='s3v4',
+                retries={'max_attempts': 3}
+            ),
             region_name='auto'  # R2 uses 'auto' for region
         )
     
     def upload_file(
-        self, 
-        file_content: bytes, 
-        filename: str, 
+        self,
+        file_content: bytes,
+        filename: str,
         content_type: str,
         user_id: str,
-        conversation_id: str,
-        metadata: Optional[Dict] = None
+        conversation_id: str
     ) -> Dict:
         """
-        Upload file to R2 storage
+        Upload a file to R2 storage
         
         Args:
-            file_content: File bytes
+            file_content: Raw file bytes
             filename: Original filename
             content_type: MIME type
-            user_id: UUID of user
-            conversation_id: UUID of conversation
-            metadata: Additional metadata
-        
+            user_id: User's UUID
+            conversation_id: Conversation's UUID
+            
         Returns:
-            Dict with file info including URL
+            Dict with file_id, key, url, and metadata
         """
-        try:
-            # Generate unique filename
-            file_id = str(uuid.uuid4())
-            ext = filename.split('.')[-1] if '.' in filename else ''
-            object_key = f"uploads/{user_id}/{conversation_id}/{file_id}.{ext}"
-            
-            # Prepare metadata
-            upload_metadata = {
-                'user-id': user_id,
-                'conversation-id': conversation_id,
-                'original-filename': filename,
-                'uploaded-at': datetime.utcnow().isoformat()
-            }
-            
-            if metadata:
-                for key, value in metadata.items():
-                    upload_metadata[f'custom-{key}'] = str(value)
-            
-            # Upload to R2
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=object_key,
-                Body=file_content,
-                ContentType=content_type,
-                Metadata=upload_metadata
-            )
-            
-            # Generate public URL (if bucket is public) or signed URL
-            file_url = f"{self.endpoint_url}/{self.bucket_name}/{object_key}"
-            
-            return {
-                'success': True,
+        # Generate unique file ID and key
+        file_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().strftime("%Y/%m/%d")
+        
+        # Create organized path: users/{user_id}/{date}/{file_id}_{filename}
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in '.-_').strip()
+        key = f"users/{user_id}/{timestamp}/{file_id}_{safe_filename}"
+        
+        # Upload to R2
+        self.client.put_object(
+            Bucket=self.bucket_name,
+            Key=key,
+            Body=file_content,
+            ContentType=content_type,
+            Metadata={
+                'user_id': user_id,
+                'conversation_id': conversation_id,
+                'original_filename': filename,
                 'file_id': file_id,
-                'object_key': object_key,
-                'file_url': file_url,
-                'filename': filename,
-                'content_type': content_type,
-                'size': len(file_content),
                 'uploaded_at': datetime.utcnow().isoformat()
             }
+        )
+        
+        return {
+            "file_id": file_id,
+            "key": key,
+            "filename": filename,
+            "content_type": content_type,
+            "file_size": len(file_content),
+            "bucket": self.bucket_name,
+            "uploaded_at": datetime.utcnow().isoformat()
+        }
+    
+    def get_download_url(self, key: str, expires_in: int = 3600) -> str:
+        """
+        Generate a pre-signed URL for file download
+        
+        Args:
+            key: File key in R2
+            expires_in: URL expiration time in seconds (default 1 hour)
             
-        except ClientError as e:
-            return {
-                'success': False,
-                'error': str(e),
-                'message': f"Failed to upload file: {str(e)}"
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e),
-                'message': f"Unexpected error: {str(e)}"
-            }
-    
-    def get_file(self, object_key: str) -> Optional[bytes]:
+        Returns:
+            Pre-signed download URL
         """
-        Download file from R2
+        url = self.client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': self.bucket_name,
+                'Key': key
+            },
+            ExpiresIn=expires_in
+        )
+        return url
+    
+    def delete_file(self, key: str) -> bool:
+        """
+        Delete a file from R2 storage
         
         Args:
-            object_key: The S3 object key
-        
+            key: File key in R2
+            
         Returns:
-            File bytes or None if error
+            True if deleted successfully
         """
         try:
-            response = self.s3_client.get_object(
+            self.client.delete_object(
                 Bucket=self.bucket_name,
-                Key=object_key
-            )
-            return response['Body'].read()
-        except ClientError as e:
-            print(f"Error downloading file: {e}")
-            return None
-    
-    def generate_presigned_url(
-        self, 
-        object_key: str, 
-        expiration: int = 3600
-    ) -> Optional[str]:
-        """
-        Generate a presigned URL for downloading a file
-        
-        Args:
-            object_key: The S3 object key
-            expiration: URL expiration time in seconds (default 1 hour)
-        
-        Returns:
-            Presigned URL or None if error
-        """
-        try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={
-                    'Bucket': self.bucket_name,
-                    'Key': object_key
-                },
-                ExpiresIn=expiration
-            )
-            return url
-        except ClientError as e:
-            print(f"Error generating presigned URL: {e}")
-            return None
-    
-    def delete_file(self, object_key: str) -> bool:
-        """
-        Delete file from R2
-        
-        Args:
-            object_key: The S3 object key
-        
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            self.s3_client.delete_object(
-                Bucket=self.bucket_name,
-                Key=object_key
+                Key=key
             )
             return True
-        except ClientError as e:
+        except Exception as e:
             print(f"Error deleting file: {e}")
             return False
     
-    def list_user_files(self, user_id: str) -> list:
+    def list_user_files(self, user_id: str, max_files: int = 100) -> list:
         """
-        List all files uploaded by a specific user
+        List all files for a specific user
         
         Args:
-            user_id: UUID of user
-        
+            user_id: User's UUID
+            max_files: Maximum number of files to return
+            
         Returns:
-            List of file info dicts
+            List of file objects
         """
         try:
-            prefix = f"uploads/{user_id}/"
-            response = self.s3_client.list_objects_v2(
+            response = self.client.list_objects_v2(
                 Bucket=self.bucket_name,
-                Prefix=prefix
+                Prefix=f"users/{user_id}/",
+                MaxKeys=max_files
             )
             
             files = []
-            if 'Contents' in response:
-                for obj in response['Contents']:
-                    files.append({
-                        'key': obj['Key'],
-                        'size': obj['Size'],
-                        'last_modified': obj['LastModified'].isoformat(),
-                    })
+            for obj in response.get('Contents', []):
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat()
+                })
             
             return files
-        except ClientError as e:
+        except Exception as e:
             print(f"Error listing files: {e}")
             return []
+    
+    def get_file_info(self, key: str) -> Optional[Dict]:
+        """
+        Get metadata for a specific file
+        
+        Args:
+            key: File key in R2
+            
+        Returns:
+            File metadata dict or None
+        """
+        try:
+            response = self.client.head_object(
+                Bucket=self.bucket_name,
+                Key=key
+            )
+            
+            return {
+                'key': key,
+                'size': response['ContentLength'],
+                'content_type': response['ContentType'],
+                'last_modified': response['LastModified'].isoformat(),
+                'metadata': response.get('Metadata', {})
+            }
+        except Exception as e:
+            print(f"Error getting file info: {e}")
+            return None
 
 
-# Singleton instance
-_r2_storage = None
-
-def get_r2_storage() -> R2Storage:
-    """Get or create R2 storage instance"""
-    global _r2_storage
-    if _r2_storage is None:
-        _r2_storage = R2Storage()
-    return _r2_storage
+# Global instance
+r2_storage = R2Storage()

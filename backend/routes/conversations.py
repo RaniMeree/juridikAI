@@ -18,7 +18,7 @@ from openai import OpenAI
 
 from database import get_db
 from file_processing import FileProcessor
-from r2_storage import get_r2_storage
+from r2_storage import r2_storage
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -52,6 +52,24 @@ class Message(Base):
     response_time = Column(Integer)
     feedback = Column(String(20))
     created_at = Column(DateTime)
+
+
+class UserFile(Base):
+    """Tracks files uploaded by users to R2 storage"""
+    __tablename__ = "user_files"
+    
+    file_id = Column(UUID(as_uuid=True), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False)
+    conversation_id = Column(UUID(as_uuid=True), nullable=False)
+    message_id = Column(UUID(as_uuid=True), nullable=True)
+    filename = Column(String(255), nullable=False)
+    file_type = Column(String(50))
+    file_size = Column(Integer)
+    r2_key = Column(Text, nullable=False)
+    word_count = Column(Integer)
+    chunk_count = Column(Integer)
+    status = Column(String(20), default='uploaded')
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # Pydantic schemas
@@ -278,8 +296,6 @@ async def send_message(
 ):
     """Send a message and get AI response (with optional file attachments)"""
     
-    message_content = content
-    
     # Verify conversation belongs to user
     conv_result = await db.execute(
         select(Conversation)
@@ -297,7 +313,7 @@ async def send_message(
     # Process uploaded files if any
     processed_files = []
     extracted_texts = []
-    r2_storage = get_r2_storage()
+    user_file_records = []  # Track files to save to database
     
     if files:
         for file in files:
@@ -313,22 +329,15 @@ async def send_message(
                 )
                 
                 # Upload to R2 storage
-                upload_result = r2_storage.upload_file(
+                r2_result = r2_storage.upload_file(
                     file_content=file_content,
                     filename=file.filename,
                     content_type=file.content_type,
                     user_id=user_id,
-                    conversation_id=conversation_id,
-                    metadata={
-                        'word_count': file_data['word_count'],
-                        'chunk_count': file_data['chunk_count']
-                    }
+                    conversation_id=conversation_id
                 )
                 
-                if not upload_result.get('success'):
-                    raise Exception(upload_result.get('message', 'Upload failed'))
-                
-                # Store metadata with R2 URL
+                # Store metadata with R2 info
                 processed_files.append({
                     "file_id": file_data["file_id"],
                     "filename": file_data["filename"],
@@ -336,9 +345,8 @@ async def send_message(
                     "file_size": file_data["file_size"],
                     "word_count": file_data["word_count"],
                     "chunk_count": file_data["chunk_count"],
-                    "processed_at": file_data["processed_at"],
-                    "r2_object_key": upload_result["object_key"],
-                    "r2_file_url": upload_result["file_url"]
+                    "r2_key": r2_result["key"],
+                    "processed_at": file_data["processed_at"]
                 })
                 
                 # Keep extracted text for AI context
@@ -347,6 +355,21 @@ async def send_message(
                     "text": file_data["extracted_text"],
                     "chunks": file_data["chunks"]
                 })
+                
+                # Create UserFile record for database
+                user_file_records.append(UserFile(
+                    file_id=uuid.UUID(file_data["file_id"]),
+                    user_id=uuid.UUID(user_id),
+                    conversation_id=uuid.UUID(conversation_id),
+                    filename=file_data["filename"],
+                    file_type=file_data["file_type"],
+                    file_size=file_data["file_size"],
+                    r2_key=r2_result["key"],
+                    word_count=file_data["word_count"],
+                    chunk_count=file_data["chunk_count"],
+                    status='uploaded',
+                    created_at=datetime.utcnow()
+                ))
                 
             except Exception as e:
                 raise HTTPException(
@@ -359,11 +382,16 @@ async def send_message(
         message_id=uuid.uuid4(),
         conversation_id=uuid.UUID(conversation_id),
         role="user",
-        content=message_content,
+        content=content,
         attached_documents=processed_files if processed_files else [],
         created_at=datetime.utcnow()
     )
     db.add(user_message)
+    
+    # Save user file records to database
+    for user_file in user_file_records:
+        user_file.message_id = user_message.message_id
+        db.add(user_file)
     
     # Generate AI response using OpenAI
     try:
@@ -402,7 +430,7 @@ async def send_message(
             })
         
         # Build current user message with document context
-        current_message = message_content
+        current_message = content
         
         # Add document content to the message
         if extracted_texts:
@@ -410,7 +438,7 @@ async def send_message(
             for doc in extracted_texts:
                 current_message += f"\n[File: {doc['filename']}]\n"
                 # Use chunking for better context
-                context = FileProcessor.create_context_for_ai(doc['chunks'], message_content)
+                context = FileProcessor.create_context_for_ai(doc['chunks'], content)
                 current_message += context + "\n"
         
         messages_for_ai.append({
@@ -456,7 +484,7 @@ async def send_message(
     
     # Generate title from first message
     if conversation.message_count == 2:
-        title = message_content[:50] + ("..." if len(message_content) > 50 else "")
+        title = content[:50] + ("..." if len(content) > 50 else "")
         if processed_files:
             title = f"📎 {title}"  # Add file indicator
         conversation.title = title

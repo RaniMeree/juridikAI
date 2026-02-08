@@ -14,7 +14,8 @@ from typing import Optional
 
 from database import get_db
 from routes.auth import User
-from routes.conversations import Conversation, Message
+from routes.conversations import Conversation, Message, UserFile
+from r2_storage import r2_storage
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -795,26 +796,193 @@ async def get_admin_logs(
 
 # File Management Endpoints
 @router.get('/files')
-async def get_uploaded_files(page: int = Query(1, ge=1), limit: int = Query(50, ge=1, le=100), user_id: Optional[str] = None, conversation_id: Optional[str] = None, admin: User = Depends(get_current_admin), db: AsyncSession = Depends(get_db)):
-    query = 'SELECT m.message_id, m.conversation_id, m.created_at, c.user_id, u.email, u.first_name, u.last_name, c.title, m.attached_documents FROM messages m JOIN conversations c ON m.conversation_id = c.conversation_id JOIN users u ON c.user_id = u.user_id WHERE m.attached_documents IS NOT NULL AND jsonb_array_length(m.attached_documents) > 0'
+async def get_uploaded_files(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    user_id: Optional[str] = None,
+    conversation_id: Optional[str] = None,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all uploaded files with user and conversation info"""
+    
+    # Build query
+    query = """
+        SELECT 
+            uf.file_id,
+            uf.filename,
+            uf.file_type,
+            uf.file_size,
+            uf.word_count,
+            uf.chunk_count,
+            uf.r2_key,
+            uf.status,
+            uf.created_at,
+            uf.user_id,
+            uf.conversation_id,
+            uf.message_id,
+            u.email,
+            u.first_name,
+            u.last_name,
+            c.title as conversation_title
+        FROM user_files uf
+        JOIN users u ON uf.user_id = u.user_id
+        JOIN conversations c ON uf.conversation_id = c.conversation_id
+        WHERE 1=1
+    """
     params = {}
-    if user_id: query += ' AND c.user_id = :user_id'; params['user_id'] = uuid.UUID(user_id)
-    if conversation_id: query += ' AND m.conversation_id = :conversation_id'; params['conversation_id'] = uuid.UUID(conversation_id)
-    query += ' ORDER BY m.created_at DESC LIMIT :limit OFFSET :offset'
-    params['limit'] = limit; params['offset'] = (page - 1) * limit
-    result = await db.execute(text(query), params); rows = result.all(); files = []
+    
+    if user_id:
+        query += " AND uf.user_id = :user_id"
+        params['user_id'] = uuid.UUID(user_id)
+    
+    if conversation_id:
+        query += " AND uf.conversation_id = :conversation_id"
+        params['conversation_id'] = uuid.UUID(conversation_id)
+    
+    query += " ORDER BY uf.created_at DESC LIMIT :limit OFFSET :offset"
+    params['limit'] = limit
+    params['offset'] = (page - 1) * limit
+    
+    result = await db.execute(text(query), params)
+    rows = result.all()
+    
+    files = []
     for row in rows:
-        if row[8]:
-            for doc in row[8]: files.append({'messageId': str(row[0]), 'conversationId': str(row[1]), 'uploadedAt': row[2].isoformat() if row[2] else None, 'userId': str(row[3]), 'userEmail': row[4], 'userName': f"{row[5] or ''} {row[6] or ''}".strip(), 'conversationTitle': row[7], 'file': {'fileId': doc.get('file_id'), 'filename': doc.get('filename'), 'fileType': doc.get('file_type'), 'fileSize': doc.get('file_size'), 'wordCount': doc.get('word_count'), 'chunkCount': doc.get('chunk_count'), 'r2ObjectKey': doc.get('r2_object_key'), 'r2FileUrl': doc.get('r2_file_url')}})
-    cnt_q = 'SELECT COUNT(*) FROM messages m JOIN conversations c ON m.conversation_id = c.conversation_id WHERE m.attached_documents IS NOT NULL AND jsonb_array_length(m.attached_documents) > 0'
-    cnt_p = {}
-    if user_id: cnt_q += ' AND c.user_id = :user_id'; cnt_p['user_id'] = uuid.UUID(user_id)
-    if conversation_id: cnt_q += ' AND m.conversation_id = :conversation_id'; cnt_p['conversation_id'] = uuid.UUID(conversation_id)
-    cnt_r = await db.execute(text(cnt_q), cnt_p); total = cnt_r.scalar()
-    return {'files': files, 'pagination': {'page': page, 'limit': limit, 'total': total, 'totalPages': (total + limit - 1) // limit if total else 0}}
+        files.append({
+            'fileId': str(row[0]),
+            'filename': row[1],
+            'fileType': row[2],
+            'fileSize': row[3],
+            'wordCount': row[4],
+            'chunkCount': row[5],
+            'r2Key': row[6],
+            'status': row[7],
+            'uploadedAt': row[8].isoformat() if row[8] else None,
+            'userId': str(row[9]),
+            'conversationId': str(row[10]),
+            'messageId': str(row[11]) if row[11] else None,
+            'userEmail': row[12],
+            'userName': f"{row[13] or ''} {row[14] or ''}".strip(),
+            'conversationTitle': row[15]
+        })
+    
+    # Get total count
+    count_query = """
+        SELECT COUNT(*) FROM user_files uf
+        WHERE 1=1
+    """
+    count_params = {}
+    if user_id:
+        count_query += " AND uf.user_id = :user_id"
+        count_params['user_id'] = uuid.UUID(user_id)
+    if conversation_id:
+        count_query += " AND uf.conversation_id = :conversation_id"
+        count_params['conversation_id'] = uuid.UUID(conversation_id)
+    
+    count_result = await db.execute(text(count_query), count_params)
+    total = count_result.scalar() or 0
+    
+    return {
+        'files': files,
+        'pagination': {
+            'page': page,
+            'limit': limit,
+            'total': total,
+            'totalPages': (total + limit - 1) // limit if total else 0
+        }
+    }
+
 
 @router.get('/files/stats')
-async def get_file_stats(admin: User = Depends(get_current_admin), db: AsyncSession = Depends(get_db)):
-    q = 'SELECT COUNT(DISTINCT m.message_id), SUM((m.attached_documents->0->>''file_size'')::bigint), COUNT(DISTINCT c.user_id) FROM messages m JOIN conversations c ON m.conversation_id = c.conversation_id WHERE m.attached_documents IS NOT NULL AND jsonb_array_length(m.attached_documents) > 0'
-    result = await db.execute(text(q)); row = result.first()
-    return {'totalFilesUploaded': row[0] or 0, 'totalStorageUsed': row[1] or 0, 'usersWithUploads': row[2] or 0}
+async def get_file_stats(
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get file upload statistics"""
+    
+    query = """
+        SELECT 
+            COUNT(*) as total_files,
+            COALESCE(SUM(file_size), 0) as total_storage,
+            COUNT(DISTINCT user_id) as users_with_uploads,
+            COUNT(DISTINCT conversation_id) as conversations_with_files
+        FROM user_files
+        WHERE status != 'deleted'
+    """
+    
+    result = await db.execute(text(query))
+    row = result.first()
+    
+    return {
+        'totalFilesUploaded': row[0] or 0,
+        'totalStorageUsed': row[1] or 0,
+        'totalStorageUsedMB': round((row[1] or 0) / (1024 * 1024), 2),
+        'usersWithUploads': row[2] or 0,
+        'conversationsWithFiles': row[3] or 0
+    }
+
+
+@router.get('/files/{file_id}/download-url')
+async def get_file_download_url(
+    file_id: str,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Generate a pre-signed download URL for a file"""
+    
+    # Get file info from database
+    result = await db.execute(
+        select(UserFile).where(UserFile.file_id == uuid.UUID(file_id))
+    )
+    user_file = result.scalar_one_or_none()
+    
+    if not user_file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+    
+    # Generate pre-signed URL (valid for 1 hour)
+    download_url = r2_storage.get_download_url(user_file.r2_key, expires_in=3600)
+    
+    return {
+        'fileId': str(user_file.file_id),
+        'filename': user_file.filename,
+        'downloadUrl': download_url,
+        'expiresIn': 3600
+    }
+
+
+@router.delete('/files/{file_id}')
+async def delete_file(
+    file_id: str,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a file from R2 storage and mark as deleted in database"""
+    
+    # Get file info from database
+    result = await db.execute(
+        select(UserFile).where(UserFile.file_id == uuid.UUID(file_id))
+    )
+    user_file = result.scalar_one_or_none()
+    
+    if not user_file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+    
+    # Delete from R2
+    deleted = r2_storage.delete_file(user_file.r2_key)
+    
+    # Mark as deleted in database
+    user_file.status = 'deleted'
+    await db.commit()
+    
+    return {
+        'success': True,
+        'fileId': str(user_file.file_id),
+        'deletedFromStorage': deleted
+    }
