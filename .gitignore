@@ -23,6 +23,10 @@ web-build/
 .env.local
 .env.production
 
+# Firebase credentials
+firebase-service-account.json
+**/firebase-service-account.json
+
 # Python
 __pycache__/
 *.py[cod]

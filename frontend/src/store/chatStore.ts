@@ -155,7 +155,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      // Always use FormData (backend handles both cases now)
+      // Prepare form data
       const formData = new FormData();
       formData.append('content', content);
       
@@ -165,17 +165,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           formData.append('files', file);
         });
       }
-      
-      // Send FormData - let axios set the proper Content-Type with boundary
-      const response = await api.post(
-        `/conversations/${conversationId}/messages`, 
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+
+      // Send to API
+      const response = await api.post(`/conversations/${conversationId}/messages`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       const { userMessage: savedUserMessage, assistantMessage } = response.data;
 
