@@ -271,12 +271,21 @@ async def get_messages(
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
-    content: str = Form(...),
+    request: Optional[SendMessageRequest] = None,
+    content: str = Form(None),
     files: List[UploadFile] = File(None),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Send a message and get AI response (with optional file attachments)"""
+    
+    # Handle both JSON and form-data
+    if request:
+        message_content = request.content
+    elif content:
+        message_content = content
+    else:
+        raise HTTPException(status_code=400, detail="Content is required")
     
     # Verify conversation belongs to user
     conv_result = await db.execute(
@@ -357,7 +366,7 @@ async def send_message(
         message_id=uuid.uuid4(),
         conversation_id=uuid.UUID(conversation_id),
         role="user",
-        content=content,
+        content=message_content,
         attached_documents=processed_files if processed_files else [],
         created_at=datetime.utcnow()
     )
@@ -400,7 +409,7 @@ async def send_message(
             })
         
         # Build current user message with document context
-        current_message = content
+        current_message = message_content
         
         # Add document content to the message
         if extracted_texts:
@@ -408,7 +417,7 @@ async def send_message(
             for doc in extracted_texts:
                 current_message += f"\n[File: {doc['filename']}]\n"
                 # Use chunking for better context
-                context = FileProcessor.create_context_for_ai(doc['chunks'], content)
+                context = FileProcessor.create_context_for_ai(doc['chunks'], message_content)
                 current_message += context + "\n"
         
         messages_for_ai.append({
@@ -454,7 +463,7 @@ async def send_message(
     
     # Generate title from first message
     if conversation.message_count == 2:
-        title = content[:50] + ("..." if len(content) > 50 else "")
+        title = message_content[:50] + ("..." if len(message_content) > 50 else "")
         if processed_files:
             title = f"📎 {title}"  # Add file indicator
         conversation.title = title
