@@ -21,6 +21,15 @@ class R2Storage:
         self.bucket_name = os.getenv("R2_BUCKET_NAME", "files")
         self.endpoint_url = f"https://{self.account_id}.r2.cloudflarestorage.com"
         
+        # Debug logging for R2 configuration
+        print(f"=== R2 Storage Configuration ===")
+        print(f"Account ID: {self.account_id}")
+        print(f"Access Key ID: {self.access_key_id[:10]}..." if self.access_key_id else "Access Key ID: None")
+        print(f"Secret Key: {'***' if self.secret_access_key else 'None'}")
+        print(f"Bucket Name: {self.bucket_name}")
+        print(f"Endpoint URL: {self.endpoint_url}")
+        print(f"================================")
+        
         # Initialize S3 client for R2
         self.client = boto3.client(
             's3',
