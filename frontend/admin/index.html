@@ -112,6 +112,17 @@
             async getLogs(page = 1, limit = 50) {
                 const params = new URLSearchParams({ page, limit });
                 return this.request(`/admin/logs?${params}`);
+            },
+            
+            async getFiles(page = 1, limit = 50, userId = '', conversationId = '') {
+                const params = new URLSearchParams({ page, limit });
+                if (userId) params.append('user_id', userId);
+                if (conversationId) params.append('conversation_id', conversationId);
+                return this.request(`/admin/files?${params}`);
+            },
+            
+            async getFileStats() {
+                return this.request('/admin/files/stats');
             }
         };
         
@@ -952,6 +963,177 @@
             );
         }
         
+        // Files Management Component
+        function FilesPage() {
+            const [files, setFiles] = useState([]);
+            const [stats, setStats] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [page, setPage] = useState(1);
+            const [pagination, setPagination] = useState({});
+            const limit = 50;
+            
+            useEffect(() => {
+                loadFiles();
+                loadStats();
+            }, [page]);
+            
+            const loadFiles = async () => {
+                setLoading(true);
+                try {
+                    const data = await api.getFiles(page, limit);
+                    setFiles(data.files);
+                    setPagination(data.pagination);
+                } catch (err) {
+                    console.error('Failed to load files:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const loadStats = async () => {
+                try {
+                    const data = await api.getFileStats();
+                    setStats(data);
+                } catch (err) {
+                    console.error('Failed to load stats:', err);
+                }
+            };
+            
+            const formatFileSize = (bytes) => {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            };
+            
+            const formatDate = (dateString) => {
+                return new Date(dateString).toLocaleString();
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">📎 File Management</h2>
+                    
+                    {/* Stats Cards */}
+                    {stats && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <p className="text-gray-600 text-sm">Total Files</p>
+                                <p className="text-3xl font-bold text-blue-600">{stats.totalFilesUploaded}</p>
+                            </div>
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <p className="text-gray-600 text-sm">Storage Used</p>
+                                <p className="text-3xl font-bold text-green-600">
+                                    {formatFileSize(stats.totalStorageUsed)}
+                                </p>
+                            </div>
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <p className="text-gray-600 text-sm">Users with Uploads</p>
+                                <p className="text-3xl font-bold text-purple-600">{stats.usersWithUploads}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Files Table */}
+                    <div className="bg-white rounded-lg shadow">
+                        <div className="p-6 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-800">Uploaded Files</h3>
+                        </div>
+                        
+                        {loading ? (
+                            <div className="p-8 text-center text-gray-500">Loading files...</div>
+                        ) : files.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">No files uploaded yet</div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">File</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conversation</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uploaded</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {files.map((item, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">
+                                                            📄 {item.file.filename}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {item.file.fileType?.toUpperCase()} • {item.file.wordCount} words
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <p className="text-sm text-gray-900">{item.userName}</p>
+                                                        <p className="text-xs text-gray-500">{item.userEmail}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm text-gray-900">{item.conversationTitle || 'Untitled'}</p>
+                                                    <p className="text-xs text-gray-500 font-mono">{item.conversationId.substring(0, 8)}...</p>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                    {formatFileSize(item.file.fileSize)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500">
+                                                    {formatDate(item.uploadedAt)}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {item.file.r2FileUrl && (
+                                                        <a
+                                                            href={item.file.r2FileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:text-blue-800 text-sm"
+                                                        >
+                                                            Download
+                                                        </a>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                
+                                {/* Pagination */}
+                                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                                    <p className="text-sm text-gray-600">
+                                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, pagination.total)} of {pagination.total} files
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setPage(page - 1)}
+                                            disabled={page === 1}
+                                            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Previous
+                                        </button>
+                                        <span className="px-3 py-1">
+                                            Page {page} of {pagination.totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setPage(page + 1)}
+                                            disabled={page >= pagination.totalPages}
+                                            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
         // Main App Component
         function App() {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1042,6 +1224,14 @@
                             >
                                 Payments
                             </button>
+                            <button
+                                onClick={() => setCurrentPage('files')}
+                                className={`w-full text-left px-4 py-2 rounded ${
+                                    currentPage === 'files' ? 'bg-blue-600' : 'hover:bg-gray-700'
+                                }`}
+                            >
+                                📎 Files
+                            </button>
                         </nav>
                         
                         <div className="mt-auto pt-8">
@@ -1064,6 +1254,7 @@
                         {currentPage === 'conversations' && <Conversations />}
                         {currentPage === 'subscriptions' && <Subscriptions />}
                         {currentPage === 'payments' && <Payments />}
+                        {currentPage === 'files' && <FilesPage />}
                     </div>
                 </div>
             );

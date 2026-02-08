@@ -18,6 +18,7 @@ from openai import OpenAI
 
 from database import get_db
 from file_processing import FileProcessor
+from r2_storage import get_r2_storage
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -294,6 +295,7 @@ async def send_message(
     # Process uploaded files if any
     processed_files = []
     extracted_texts = []
+    r2_storage = get_r2_storage()
     
     if files:
         for file in files:
@@ -301,14 +303,30 @@ async def send_message(
                 # Read file content
                 file_content = await file.read()
                 
-                # Process the file
+                # Process the file (extract text)
                 file_data = FileProcessor.process_file(
                     file_content=file_content,
                     content_type=file.content_type,
                     filename=file.filename
                 )
                 
-                # Store metadata (without the full extracted text to save space)
+                # Upload to R2 storage
+                upload_result = r2_storage.upload_file(
+                    file_content=file_content,
+                    filename=file.filename,
+                    content_type=file.content_type,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    metadata={
+                        'word_count': file_data['word_count'],
+                        'chunk_count': file_data['chunk_count']
+                    }
+                )
+                
+                if not upload_result.get('success'):
+                    raise Exception(upload_result.get('message', 'Upload failed'))
+                
+                # Store metadata with R2 URL
                 processed_files.append({
                     "file_id": file_data["file_id"],
                     "filename": file_data["filename"],
@@ -316,7 +334,9 @@ async def send_message(
                     "file_size": file_data["file_size"],
                     "word_count": file_data["word_count"],
                     "chunk_count": file_data["chunk_count"],
-                    "processed_at": file_data["processed_at"]
+                    "processed_at": file_data["processed_at"],
+                    "r2_object_key": upload_result["object_key"],
+                    "r2_file_url": upload_result["file_url"]
                 })
                 
                 # Keep extracted text for AI context
