@@ -155,19 +155,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('content', content);
+      let response;
       
-      // Add files if any
+      // If there are files, use FormData; otherwise use JSON
       if (files && files.length > 0) {
+        const formData = new FormData();
+        formData.append('content', content);
         files.forEach((file) => {
           formData.append('files', file);
         });
+        response = await api.post(`/conversations/${conversationId}/messages`, formData);
+      } else {
+        // No files - send as JSON
+        response = await api.post(`/conversations/${conversationId}/messages-json`, {
+          content,
+        });
       }
-
-      // Send to API - let axios set Content-Type automatically for FormData
-      const response = await api.post(`/conversations/${conversationId}/messages`, formData);
 
       const { userMessage: savedUserMessage, assistantMessage } = response.data;
 

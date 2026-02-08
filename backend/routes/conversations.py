@@ -286,6 +286,128 @@ async def get_messages(
     ]
 
 
+# Simple JSON endpoint for messages without files
+@router.post("/{conversation_id}/messages-json")
+async def send_message_json(
+    conversation_id: str,
+    request: SendMessageRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Send a message without file attachments (JSON)"""
+    
+    # Verify conversation belongs to user
+    conv_result = await db.execute(
+        select(Conversation)
+        .where(Conversation.conversation_id == uuid.UUID(conversation_id))
+        .where(Conversation.user_id == uuid.UUID(user_id))
+    )
+    conversation = conv_result.scalar_one_or_none()
+    
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    
+    content = request.content
+    
+    # Save user message
+    user_message = Message(
+        message_id=uuid.uuid4(),
+        conversation_id=uuid.UUID(conversation_id),
+        role="user",
+        content=content,
+        attached_documents=[],
+        created_at=datetime.utcnow()
+    )
+    db.add(user_message)
+    
+    # Generate AI response
+    try:
+        history_result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == uuid.UUID(conversation_id))
+            .order_by(Message.created_at)
+            .limit(10)
+        )
+        history_messages = history_result.scalars().all()
+        
+        messages_for_ai = [
+            {
+                "role": "system",
+                "content": (
+                    "You are Anna, a knowledgeable Swedish legal AI assistant. "
+                    "You help users understand Swedish law and legal matters. "
+                    "Provide clear, accurate, and helpful legal information. "
+                    "Always remind users to consult a qualified lawyer for specific legal advice. "
+                    "Respond in the same language the user uses (Swedish or English)."
+                )
+            }
+        ]
+        
+        for msg in history_messages:
+            messages_for_ai.append({"role": msg.role, "content": msg.content})
+        
+        messages_for_ai.append({"role": "user", "content": content})
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages_for_ai,
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        assistant_content = response.choices[0].message.content
+        tokens_used = response.usage.total_tokens if response.usage else 0
+        
+    except Exception as e:
+        print(f"OpenAI API Error: {e}")
+        assistant_content = "I apologize, but I'm having trouble processing your request. Please try again."
+        tokens_used = 0
+    
+    # Save assistant message
+    assistant_message = Message(
+        message_id=uuid.uuid4(),
+        conversation_id=uuid.UUID(conversation_id),
+        role="assistant",
+        content=assistant_content,
+        sources=[],
+        tokens_used=tokens_used,
+        created_at=datetime.utcnow()
+    )
+    db.add(assistant_message)
+    
+    # Update conversation
+    conversation.message_count = (conversation.message_count or 0) + 2
+    conversation.last_message_at = datetime.utcnow()
+    conversation.updated_at = datetime.utcnow()
+    
+    if conversation.message_count == 2:
+        conversation.title = content[:50] + ("..." if len(content) > 50 else "")
+    
+    await db.commit()
+    await db.refresh(user_message)
+    await db.refresh(assistant_message)
+    
+    return {
+        "userMessage": {
+            "id": str(user_message.message_id),
+            "role": "user",
+            "content": user_message.content,
+            "attachedDocuments": [],
+            "createdAt": user_message.created_at.isoformat()
+        },
+        "assistantMessage": {
+            "id": str(assistant_message.message_id),
+            "role": "assistant",
+            "content": assistant_message.content,
+            "sources": [],
+            "createdAt": assistant_message.created_at.isoformat()
+        }
+    }
+
+
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
