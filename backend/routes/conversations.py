@@ -271,10 +271,10 @@ async def get_messages(
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
-    content: str = Form(...),
-    files: List[UploadFile] = File(default=[]),
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    content: str = Form(...),
+    files: Optional[List[UploadFile]] = File(None)
 ):
     """Send a message and get AI response (with optional file attachments)"""
     
