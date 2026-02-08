@@ -271,21 +271,14 @@ async def get_messages(
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
-    request: Optional[SendMessageRequest] = None,
-    content: str = Form(None),
-    files: List[UploadFile] = File(None),
+    content: str = Form(...),
+    files: List[UploadFile] = File(default=[]),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Send a message and get AI response (with optional file attachments)"""
     
-    # Handle both JSON and form-data
-    if request:
-        message_content = request.content
-    elif content:
-        message_content = content
-    else:
-        raise HTTPException(status_code=400, detail="Content is required")
+    message_content = content
     
     # Verify conversation belongs to user
     conv_result = await db.execute(
