@@ -18,7 +18,7 @@ class R2Storage:
         self.account_id = os.getenv("R2_ACCOUNT_ID", "f68ad91187381e574b68e08dab1d20a3")
         self.access_key_id = os.getenv("R2_ACCESS_KEY_ID")
         self.secret_access_key = os.getenv("R2_SECRET_ACCESS_KEY")
-        self.bucket_name = os.getenv("R2_BUCKET_NAME", "anna-legal-files")
+        self.bucket_name = os.getenv("R2_BUCKET_NAME", "files")
         self.endpoint_url = f"https://{self.account_id}.r2.cloudflarestorage.com"
         
         # Initialize S3 client for R2
