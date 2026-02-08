@@ -155,22 +155,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      let response;
+      // Always use FormData (backend handles both cases now)
+      const formData = new FormData();
+      formData.append('content', content);
       
-      // If there are files, use FormData; otherwise use JSON
+      // Add files if any
       if (files && files.length > 0) {
-        const formData = new FormData();
-        formData.append('content', content);
         files.forEach((file) => {
           formData.append('files', file);
         });
-        response = await api.post(`/conversations/${conversationId}/messages`, formData);
-      } else {
-        // No files - send as JSON
-        response = await api.post(`/conversations/${conversationId}/messages-json`, {
-          content,
-        });
       }
+      
+      const response = await api.post(`/conversations/${conversationId}/messages`, formData);
 
       const { userMessage: savedUserMessage, assistantMessage } = response.data;
 

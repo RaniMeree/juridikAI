@@ -411,14 +411,29 @@ async def send_message_json(
 @router.post("/{conversation_id}/messages")
 async def send_message(
     conversation_id: str,
-    content: str = Form(...),
-    files: List[UploadFile] = File(default=[]),
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    content: str = Form(None),
+    files: List[UploadFile] = File(default=None)
 ):
     """Send a message and get AI response (with optional file attachments)"""
     
+    print(f"\n=== MESSAGE REQUEST START ===")
+    print(f"Conversation ID: {conversation_id}")
+    print(f"User ID: {user_id}")
+    print(f"Content: {content}")
+    print(f"Files received: {files}")
+    print(f"Files count: {len(files) if files else 0}")
+    
+    if not content:
+        print("ERROR: No content provided")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Content is required"
+        )
+    
     # Verify conversation belongs to user
+    print(f"Verifying conversation ownership...")
     conv_result = await db.execute(
         select(Conversation)
         .where(Conversation.conversation_id == uuid.UUID(conversation_id))
@@ -427,37 +442,57 @@ async def send_message(
     conversation = conv_result.scalar_one_or_none()
     
     if not conversation:
+        print(f"ERROR: Conversation not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found"
         )
+    
+    print(f"Conversation found: {conversation.title}")
+    
+    # Handle files if provided
+    files_to_process = files if files and files[0].filename else []
+    print(f"Files to process: {len(files_to_process)}")
     
     # Process uploaded files if any
     processed_files = []
     extracted_texts = []
     user_file_records = []  # Track files to save to database
     
-    if files:
+    if files_to_process:
+        print(f"\n--- Processing {len(files_to_process)} files ---")
         for file in files:
             try:
+                print(f"Processing file: {file.filename} ({file.content_type})")
+                
                 # Read file content
                 file_content = await file.read()
+                print(f"File size: {len(file_content)} bytes")
                 
                 # Process the file (extract text)
+                print(f"Extracting text from file...")
                 file_data = FileProcessor.process_file(
                     file_content=file_content,
                     content_type=file.content_type,
                     filename=file.filename
                 )
+                print(f"Text extracted: {file_data['word_count']} words, {file_data['chunk_count']} chunks")
                 
                 # Upload to R2 storage
-                r2_result = r2_storage.upload_file(
-                    file_content=file_content,
-                    filename=file.filename,
-                    content_type=file.content_type,
-                    user_id=user_id,
-                    conversation_id=conversation_id
-                )
+                print(f"Uploading to R2...")
+                try:
+                    r2_result = r2_storage.upload_file(
+                        file_content=file_content,
+                        filename=file.filename,
+                        content_type=file.content_type,
+                        user_id=user_id,
+                        conversation_id=conversation_id
+                    )
+                    print(f"R2 upload successful: {r2_result['key']}")
+                except Exception as r2_error:
+                    print(f"R2 UPLOAD ERROR: {str(r2_error)}")
+                    print(f"R2 Error type: {type(r2_error)}")
+                    raise
                 
                 # Store metadata with R2 info
                 processed_files.append({
@@ -492,13 +527,17 @@ async def send_message(
                     status='uploaded',
                     created_at=datetime.utcnow()
                 ))
+                print(f"File record created for database")
                 
             except Exception as e:
+                print(f"FILE PROCESSING ERROR: {str(e)}")
+                print(f"Error type: {type(e)}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to process file '{file.filename}': {str(e)}"
                 )
     
+    print(f"\n--- Saving user message ---")
     # Save user message
     user_message = Message(
         message_id=uuid.uuid4(),
@@ -509,15 +548,20 @@ async def send_message(
         created_at=datetime.utcnow()
     )
     db.add(user_message)
+    print(f"User message added to session")
     
     # Save user file records to database
+    print(f"Saving {len(user_file_records)} file records...")
     for user_file in user_file_records:
         user_file.message_id = user_message.message_id
         db.add(user_file)
+    print(f"File records added to session")
     
     # Generate AI response using OpenAI
+    print(f"Generating AI response...")
     try:
         # Get conversation history for context
+        print(f"Fetching conversation history for context...")
         history_result = await db.execute(
             select(Message)
             .where(Message.conversation_id == uuid.UUID(conversation_id))
@@ -525,6 +569,7 @@ async def send_message(
             .limit(10)  # Last 10 messages for context
         )
         history_messages = history_result.scalars().all()
+        print(f"Found {len(history_messages)} previous messages in history")
         
         # Build conversation context
         system_prompt = (
@@ -568,6 +613,7 @@ async def send_message(
             "content": current_message
         })
         
+        print(f"Calling OpenAI API with {len(messages_for_ai)} messages...")
         # Call OpenAI API
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",  # Using mini for cost efficiency
@@ -578,9 +624,11 @@ async def send_message(
         
         assistant_content = response.choices[0].message.content
         tokens_used = response.usage.total_tokens if response.usage else 0
+        print(f"AI response generated successfully. Tokens used: {tokens_used}")
         
     except Exception as e:
         print(f"OpenAI API Error: {e}")
+        print(f"Error type: {type(e).__name__}")
         assistant_content = (
             "I apologize, but I'm having trouble processing your request right now. "
             "Please try again in a moment."
@@ -588,6 +636,7 @@ async def send_message(
         tokens_used = 0
     
     # Save assistant message
+    print(f"Saving assistant message...")
     assistant_message = Message(
         message_id=uuid.uuid4(),
         conversation_id=uuid.UUID(conversation_id),
@@ -598,11 +647,14 @@ async def send_message(
         created_at=datetime.utcnow()
     )
     db.add(assistant_message)
+    print(f"Assistant message added to session")
     
     # Update conversation
+    print(f"Updating conversation metadata...")
     conversation.message_count = (conversation.message_count or 0) + 2
     conversation.last_message_at = datetime.utcnow()
     conversation.updated_at = datetime.utcnow()
+    print(f"Conversation message count: {conversation.message_count}")
     
     # Generate title from first message
     if conversation.message_count == 2:
@@ -610,11 +662,18 @@ async def send_message(
         if processed_files:
             title = f"📎 {title}"  # Add file indicator
         conversation.title = title
+        print(f"Generated conversation title: {title}")
     
+    print(f"Committing all changes to database...")
     await db.commit()
+    print(f"Database commit successful")
+    
+    print(f"Refreshing message objects...")
     await db.refresh(user_message)
     await db.refresh(assistant_message)
+    print(f"Messages refreshed")
     
+    print(f"=== MESSAGE REQUEST COMPLETE === Returning response...")
     return {
         "userMessage": {
             "id": str(user_message.message_id),
